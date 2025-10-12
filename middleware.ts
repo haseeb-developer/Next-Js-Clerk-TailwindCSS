@@ -12,23 +12,34 @@ const isPublicRoute = createRouteMatcher([
 ])
 
 export default clerkMiddleware(async (auth, req) => {
-  const { userId } = await auth()
-  
-  // Protect routes that require authentication
-  if (isProtectedRoute(req)) {
-    if (!userId) {
-      return NextResponse.redirect(new URL('/sign-in', req.url))
+  // Check if Clerk keys are available
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || !process.env.CLERK_SECRET_KEY) {
+    console.warn('Clerk environment variables not set, skipping middleware')
+    return NextResponse.next()
+  }
+
+  try {
+    const { userId } = await auth()
+    
+    // Protect routes that require authentication
+    if (isProtectedRoute(req)) {
+      if (!userId) {
+        return NextResponse.redirect(new URL('/sign-in', req.url))
+      }
     }
-  }
-  
-  // Redirect authenticated users away from auth pages
-  if (userId && isPublicRoute(req)) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
-  }
-  
-  // Redirect authenticated users from home to dashboard
-  if (userId && req.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
+    
+    // Redirect authenticated users away from auth pages
+    if (userId && isPublicRoute(req)) {
+      return NextResponse.redirect(new URL('/dashboard', req.url))
+    }
+    
+    // Redirect authenticated users from home to dashboard
+    if (userId && req.nextUrl.pathname === '/') {
+      return NextResponse.redirect(new URL('/dashboard', req.url))
+    }
+  } catch (error) {
+    console.error('Clerk middleware error:', error)
+    return NextResponse.next()
   }
 })
 

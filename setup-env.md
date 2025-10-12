@@ -30,9 +30,15 @@ npx vercel --prod
 ### Option B: Deploy via Vercel Dashboard
 1. Push your code to GitHub
 2. Connect your repo to Vercel
-3. Add environment variables in Vercel dashboard:
-   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-   - `CLERK_SECRET_KEY`
+3. **Add environment variables in Vercel dashboard:**
+   - Go to your project → Settings → Environment Variables
+   - Add `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (your publishable key)
+   - Add `CLERK_SECRET_KEY` (your secret key)
+   - Set environment to "Production"
+   - **Redeploy** your project
+
+### 🔧 **If you get MIDDLEWARE_INVOCATION_FAILED error:**
+The middleware has been updated to handle missing Clerk keys gracefully. Your app will work even without environment variables, but authentication features won't be available until you add the Clerk keys.
 
 ## 🎉 Features Included:
 - ✅ Beautiful dark theme with Tailwind CSS
