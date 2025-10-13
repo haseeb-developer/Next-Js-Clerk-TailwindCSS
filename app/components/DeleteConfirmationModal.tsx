@@ -32,24 +32,32 @@ export function DeleteConfirmationModal({
               background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)',
               border: '1px solid #0f172a'
             }} 
-            className="backdrop-blur-xl rounded-3xl p-8 shadow-2xl w-full max-w-md"
+            className="backdrop-blur-xl rounded-3xl p-8 shadow-2xl w-full max-w-2xl"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
           >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-red-100 rounded-full">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className={`p-4 rounded-2xl shadow-lg ${
+              isPermanent 
+                ? 'bg-red-500/20 border border-red-500/30' 
+                : 'bg-orange-500/20 border border-orange-500/30'
+            }`}>
+              <svg className={`w-7 h-7 ${
+                isPermanent ? 'text-red-400' : 'text-orange-400'
+              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white">
+              <h2 className={`text-3xl font-bold ${
+                isPermanent ? 'text-red-400' : 'text-orange-400'
+              }`}>
                 {isPermanent ? 'Permanent Delete' : 'Move to Recycle Bin'}
               </h2>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-base mt-1">
                 {isPermanent ? 'This action cannot be undone' : 'You can restore it later'}
               </p>
             </div>
@@ -57,10 +65,26 @@ export function DeleteConfirmationModal({
         </div>
 
         <div className="mb-6">
-          <p className="text-gray-300 mb-4">
+          <p className="text-gray-300 mb-4 leading-relaxed">
             {isPermanent 
-              ? `Are you sure you want to permanently delete "${snippetTitle}"? This action cannot be undone and the snippet will be lost forever.`
-              : `Are you sure you want to move "${snippetTitle}" to the recycle bin? You can restore it later within 30 days.`
+              ? (
+                <>
+                  Are you sure you want to permanently delete{' '}
+                  <span className="font-semibold text-white break-words">
+                    &quot;{snippetTitle.length > 50 ? snippetTitle.substring(0, 50) + '...' : snippetTitle}&quot;
+                  </span>
+                  ? This action cannot be undone and the snippet will be lost forever.
+                </>
+              )
+              : (
+                <>
+                  Are you sure you want to move{' '}
+                  <span className="font-semibold text-white break-words">
+                    &quot;{snippetTitle.length > 50 ? snippetTitle.substring(0, 50) + '...' : snippetTitle}&quot;
+                  </span>
+                  {' '}to the recycle bin? You can restore it later within 30 days.
+                </>
+              )
             }
           </p>
           
@@ -81,26 +105,47 @@ export function DeleteConfirmationModal({
           )}
         </div>
 
-        <div className="flex gap-3">
-          <button
+        <div className="flex gap-4">
+          <motion.button
             onClick={onClose}
-            className="flex-1 px-6 py-3 bg-gray-700 text-gray-200 rounded-xl hover:bg-gray-600 transition-all duration-300 font-semibold cursor-pointer"
+            className="flex-1 px-6 py-4 bg-gray-700/80 text-gray-200 rounded-xl border border-gray-600/50 hover:bg-gray-600/80 hover:border-gray-500/70 transition-all duration-300 font-semibold cursor-pointer flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M6 18L18 6M6 6l12 12"/>
+            </svg>
             Cancel
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             onClick={() => {
               onConfirm()
               onClose()
             }}
-            className={`flex-1 px-6 py-3 text-white rounded-xl transition-all duration-300 font-semibold cursor-pointer ${
+            className={`flex-1 px-6 py-4 text-white rounded-xl border transition-all duration-300 font-semibold cursor-pointer flex items-center justify-center gap-2 shadow-lg hover:shadow-xl ${
               isPermanent 
-                ? 'bg-red-600 hover:bg-red-700' 
-                : 'bg-orange-600 hover:bg-orange-700'
+                ? 'bg-red-600/90 border-red-500/50 hover:bg-red-600 hover:border-red-400/70 hover:shadow-red-500/25' 
+                : 'bg-orange-600/90 border-orange-500/50 hover:bg-orange-600 hover:border-orange-400/70 hover:shadow-orange-500/25'
             }`}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            {isPermanent ? 'Delete Forever' : 'Move to Recycle Bin'}
-          </button>
+            {isPermanent ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Delete Forever
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Move to Recycle Bin
+              </>
+            )}
+          </motion.button>
         </div>
           </motion.div>
         </motion.div>

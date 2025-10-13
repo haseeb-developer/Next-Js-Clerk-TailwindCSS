@@ -2,23 +2,34 @@
 
 ## ✅ Build Status: READY FOR DEPLOYMENT
 
-Your app now builds successfully! The Clerk integration has been optimized to work with Vercel's static generation.
+Your app now builds successfully! Both Clerk and Supabase integrations have been optimized to work with Vercel's static generation.
 
-## Step 1: Get Your Clerk Keys
+## Step 1: Get Your Keys
 
+### Clerk Authentication
 1. Go to [Clerk Dashboard](https://dashboard.clerk.com/last-active?path=api-keys)
 2. Copy your **Publishable Key** and **Secret Key**
+
+### Supabase Database
+Your Supabase credentials are already configured:
+- **Project URL**: `https://akrqdinpdwfwfuomocar.supabase.co`
+- **Anon Key**: Available in `public/supabase-project-credentail.txt`
 
 ## Step 2: Create Environment File (Local Development)
 
 Create a `.env.local` file in your project root with:
 
 ```env
+# Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_publishable_key_here
 CLERK_SECRET_KEY=sk_test_your_secret_key_here
+
+# Supabase Database
+NEXT_PUBLIC_SUPABASE_URL=https://akrqdinpdwfwfuomocar.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrcnFkaW5wZHdmd2Z1b21vY2FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNDAxMjQsImV4cCI6MjA3NTgxNjEyNH0.M0Z7EZc-YIQ09wIw9GTz6gOUn4U8yfYcL3GyoXlXtBc
 ```
 
-**Note**: Replace the placeholder values with your actual Clerk keys from the dashboard.
+**Note**: Replace the Clerk placeholder values with your actual keys from the dashboard.
 
 ## Step 3: Deploy to Vercel
 
@@ -32,8 +43,12 @@ npx vercel --prod
 2. Connect your repo to Vercel
 3. **Add environment variables in Vercel dashboard:**
    - Go to your project → Settings → Environment Variables
-   - Add `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (your publishable key)
-   - Add `CLERK_SECRET_KEY` (your secret key)
+   - **Clerk Authentication:**
+     - Add `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` (your publishable key)
+     - Add `CLERK_SECRET_KEY` (your secret key)
+   - **Supabase Database:**
+     - Add `NEXT_PUBLIC_SUPABASE_URL` = `https://akrqdinpdwfwfuomocar.supabase.co`
+     - Add `NEXT_PUBLIC_SUPABASE_ANON_KEY` = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrcnFkaW5wZHdmd2Z1b21vY2FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNDAxMjQsImV4cCI6MjA3NTgxNjEyNH0.M0Z7EZc-YIQ09wIw9GTz6gOUn4U8yfYcL3GyoXlXtBc`
    - Set environment to "Production"
    - **Redeploy** your project
 
