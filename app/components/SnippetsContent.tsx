@@ -6,6 +6,8 @@ import { supabase, type Snippet, type CreateSnippetData } from '../../lib/supaba
 import { Toast, ToastContainer } from './Toast'
 import { DeleteConfirmationModal } from './DeleteConfirmationModal'
 import { RecycleBinModal } from './RecycleBinModal'
+import { ExportModal } from './ExportModal'
+import { ImportModal } from './ImportModal'
 
 const PROGRAMMING_LANGUAGES = [
   'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'PHP', 'Ruby', 'Go', 'Rust',
@@ -90,6 +92,10 @@ function SnippetsUserContent({ useUser }: any) {
           // Copy state for toast feedback
           const [copiedSnippetId, setCopiedSnippetId] = useState<string | null>(null)
           const [modalCopyClicked, setModalCopyClicked] = useState(false)
+          
+          // Import/Export modal states
+          const [showExportModal, setShowExportModal] = useState(false)
+          const [showImportModal, setShowImportModal] = useState(false)
           
           // Check if new schema is available
           const [hasNewSchema, setHasNewSchema] = useState<boolean | null>(null)
@@ -388,6 +394,36 @@ function SnippetsUserContent({ useUser }: any) {
     }
   }, [addToast])
 
+  // Handle importing snippets
+  const handleImportSnippets = useCallback(async (snippets: Omit<Snippet, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]) => {
+    if (!user) return
+
+    try {
+      const { error } = await supabase
+        .from('snippets')
+        .insert(snippets.map(snippet => ({
+          ...snippet,
+          user_id: user.id
+        })))
+        .select()
+
+      if (error) throw error
+
+      // Refresh snippets list
+      await fetchSnippets()
+      
+      addToast({
+        message: `Successfully imported ${snippets.length} snippet(s)`,
+        type: 'success'
+      })
+    } catch {
+      addToast({
+        message: 'Failed to import snippets',
+        type: 'error'
+      })
+    }
+  }, [user, addToast, fetchSnippets])
+
   // Handle copy in modal with toast feedback
   const handleModalCopy = useCallback(async (code: string) => {
     try {
@@ -482,12 +518,34 @@ function SnippetsUserContent({ useUser }: any) {
                 </p>
               </div>
               <div className="flex gap-3">
+                {/* Import Button */}
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 shadow-lg shadow-green-500/30 hover:shadow-green-500/50 hover:scale-105 cursor-pointer flex items-center gap-1.5"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  Import
+                </button>
+                
+                {/* Export Button */}
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-purple-500 to-violet-500 text-white rounded-xl hover:from-purple-600 hover:to-violet-600 transition-all duration-300 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 cursor-pointer flex items-center gap-1.5"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  Export
+                </button>
+                
                 {hasNewSchema === true && (
                   <button
                     onClick={() => setShowRecycleBin(true)}
-                    className="px-6 py-3 text-sm font-bold bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all duration-300 shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:scale-105 cursor-pointer flex items-center gap-2"
+                    className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all duration-300 shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:scale-105 cursor-pointer flex items-center gap-1.5"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
                     Recycle Bin
@@ -495,9 +553,12 @@ function SnippetsUserContent({ useUser }: any) {
                 )}
                 <button
                   onClick={() => setShowCreateForm(true)}
-                  className="px-8 py-3 text-sm font-bold bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-105 cursor-pointer"
+                  className="px-6 py-2 text-sm font-bold bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-105 cursor-pointer flex items-center gap-1.5"
                 >
-                  + New Snippet
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 5v14m7-7H5"/>
+                  </svg>
+                  New Snippet
                 </button>
               </div>
             </div>
@@ -1117,14 +1178,14 @@ function SnippetsUserContent({ useUser }: any) {
                 >
                   {modalCopyClicked ? (
                     <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M5 13l4 4L19 7"/>
                       </svg>
                       Copied
                     </>
                   ) : (
                     <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
                         <path d="M8 2h8v4H8V2z"/>
                       </svg>
@@ -1347,6 +1408,22 @@ function SnippetsUserContent({ useUser }: any) {
           snippetTitle={snippetToDelete?.title || ''}
           isPermanent={hasNewSchema === false}
         />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        snippets={snippets}
+        onShowToast={(message, type) => addToast({ message, type })}
+      />
+
+      {/* Import Modal */}
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportSnippets={handleImportSnippets}
+        onShowToast={(message, type) => addToast({ message, type })}
+      />
 
       {/* Recycle Bin Modal */}
       <RecycleBinModal
