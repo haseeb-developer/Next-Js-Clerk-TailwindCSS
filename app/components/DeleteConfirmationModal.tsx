@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean
@@ -17,6 +18,9 @@ export function DeleteConfirmationModal({
   snippetTitle,
   isPermanent = false
 }: DeleteConfirmationModalProps) {
+  // Lock body scroll when modal is open
+  useBodyScrollLock(isOpen)
+  
   return (
     <AnimatePresence>
       {isOpen && (

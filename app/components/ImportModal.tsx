@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Snippet } from '@/lib/supabase'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 interface ImportModalProps {
   isOpen: boolean
@@ -17,6 +18,9 @@ export function ImportModal({ isOpen, onClose, onImportSnippets, onShowToast }: 
   const [previewData, setPreviewData] = useState<Omit<Snippet, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]>([])
   const [importFormat, setImportFormat] = useState<'json' | 'txt' | 'md'>('json')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Lock body scroll when modal is open
+  useBodyScrollLock(isOpen)
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -364,7 +368,7 @@ export function ImportModal({ isOpen, onClose, onImportSnippets, onShowToast }: 
                   <h3 className="text-lg font-semibold text-white mb-4">
                     Preview ({previewData.length} snippets found)
                   </h3>
-                  <div className="max-h-48 overflow-y-auto space-y-3 pr-2">
+                  <div className="max-h-48 overflow-y-auto space-y-3 pr-2 modal-scroll">
                     {previewData.slice(0, 5).map((snippet, index) => (
                       <div key={index} className="p-4 bg-gray-800/50 border border-gray-600/50 rounded-xl">
                         <div className="flex items-center gap-3 mb-2">

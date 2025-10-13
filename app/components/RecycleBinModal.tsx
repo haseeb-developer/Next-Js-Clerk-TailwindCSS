@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { Snippet } from '@/lib/supabase'
 
 interface RecycleBinModalProps {
@@ -29,6 +30,9 @@ export function RecycleBinModal({
   const [selectedSnippets, setSelectedSnippets] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false)
+  
+  // Lock body scroll when modal is open
+  useBodyScrollLock(isOpen)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [snippetToDelete, setSnippetToDelete] = useState<DeletedSnippet | null>(null)
 
@@ -221,7 +225,7 @@ export function RecycleBinModal({
         )}
 
         {/* Content */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
+        <div className="p-6 max-h-[60vh] overflow-y-auto modal-scroll">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-gray-400">Loading deleted snippets...</div>

@@ -8,6 +8,7 @@ import { DeleteConfirmationModal } from './DeleteConfirmationModal'
 import { RecycleBinModal } from './RecycleBinModal'
 import { ExportModal } from './ExportModal'
 import { ImportModal } from './ImportModal'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 const PROGRAMMING_LANGUAGES = [
   'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'PHP', 'Ruby', 'Go', 'Rust',
@@ -80,6 +81,9 @@ function SnippetsUserContent({ useUser }: any) {
           const [showRecentSnippets, setShowRecentSnippets] = useState(true)
           const [showAllSnippets, setShowAllSnippets] = useState(false)
           const [viewingSnippet, setViewingSnippet] = useState<Snippet | null>(null)
+          
+          // Lock body scroll when modals are open
+          useBodyScrollLock(showCreateForm || viewingSnippet !== null)
           
           // Toast state
           const [toasts, setToasts] = useState<Toast[]>([])
@@ -640,208 +644,120 @@ function SnippetsUserContent({ useUser }: any) {
           </div>
         </motion.div>
 
-        {/* Recent Snippets Accordion */}
+        {/* Recent Snippets Section */}
         {recentSnippets.length > 0 && (
           <div className="mb-8 mx-5">
             <div style={{
               background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.05) 100%)',
               border: '1px solid #0f172a'
             }} className="backdrop-blur-xl rounded-3xl overflow-hidden shadow-xl">
-              {/* Accordion Header */}
-              <button
-                onClick={() => setShowRecentSnippets(!showRecentSnippets)}
-                className="w-full p-6 text-left flex items-center justify-between hover:bg-white/5 transition-colors duration-200 cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                    <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              {/* Header */}
+              <div className="p-6 border-b border-gray-600/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/20 rounded-lg">
+                      <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Recent Snippets</h2>
+                      <p className="text-gray-400">Continue working on your latest code</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowRecentSnippets(!showRecentSnippets)}
+                    className="p-2 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 hover:border-gray-500/70 rounded-lg transition-all duration-300 cursor-pointer"
+                  >
+                    <svg className={`w-5 h-5 text-gray-400 hover:text-white transition-all duration-200 ${showRecentSnippets ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M19 9l-7 7-7-7"/>
                     </svg>
-                    Recent Snippets
-                  </h2>
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
-                    {recentSnippets.length} recent
-                  </span>
+                  </button>
                 </div>
-                <svg 
-                  className={`w-6 h-6 text-gray-400 transition-transform duration-200 ${showRecentSnippets ? 'rotate-180' : ''}`} 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M19 9l-7 7-7-7"/>
-                </svg>
-              </button>
+              </div>
 
-              {/* Accordion Content */}
+              {/* Content */}
               <div className={`transition-all duration-300 overflow-hidden ${showRecentSnippets ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="p-6 pt-0">
-              <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {recentSnippets.map((snippet) => {
-                  const createdDate = new Date(snippet.created_at)
-                  const updatedDate = new Date(snippet.updated_at)
-                  const isUpdated = updatedDate.getTime() - createdDate.getTime() > 1000
-                  
-                  return (
-                    <motion.div
-                      key={snippet.id}
-                      className="bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-600/60 shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden hover:border-blue-300/50 h-full flex flex-col"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: 0.1 }}
-                      whileHover={{ scale: 1.02 }}
-                    >
-                      {/* Header Section with Beautiful Partition */}
-                      <div className="relative p-3 border-b border-gray-600/50">
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-l-2xl"></div>
-                        <div className="ml-4">
-                          <h3 className="text-lg font-bold text-white mb-1 group-hover:text-blue-400 transition-colors truncate" title={snippet.title}>
-                            {snippet.title.length > 20 ? snippet.title.substring(0, 20) + '...' : snippet.title}
-                          </h3>
-                          
-                          {snippet.description && (
-                            <>
-                              <div className="h-px bg-gradient-to-r from-gray-600/40 to-transparent my-2"></div>
-                              <p className="text-gray-300 text-sm leading-relaxed" title={snippet.description}>
-                                {snippet.description.length > 50 ? snippet.description.substring(0, 50) + '...' : snippet.description}
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Language and Tags Section */}
-                      <div className="px-3 py-1.5 bg-gray-900/30 border-b border-gray-600/30">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-lg border border-blue-200">
-                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                            </svg>
-                            {snippet.language}
-                          </span>
-                          {snippet.is_public && (
-                            <span className="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-lg border border-green-200">
-                              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                              </svg>
-                              Public
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Code Section */}
-                      <div className="p-4 flex-1">
-                        <div className="bg-gray-900/80 rounded-xl p-3 border border-gray-700/50 h-full">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Code Preview</span>
-                            <span className="text-xs text-gray-500">{snippet.code.split('\n').length} lines</span>
-                          </div>
-                          <pre className="text-xs text-gray-300 whitespace-pre-wrap overflow-hidden font-mono leading-relaxed max-h-32">
-                            <code>{snippet.code}</code>
-                          </pre>
-                        </div>
-                      </div>
-
-                      {/* Action Icons Section */}
-                      <div className="px-3 pb-3">
-                        <div className="flex justify-center gap-2 p-2 bg-gray-900/40 border border-gray-700/50 rounded-xl">
-                          <motion.button
-                            onClick={() => setViewingSnippet(snippet)}
-                            className="p-2.5 text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all duration-300 cursor-pointer group/view border border-transparent hover:border-blue-500/30"
-                            title="View Snippet"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <svg className="w-5 h-5 group-hover/view:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                              <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                          </motion.button>
-                          <motion.button
-                            onClick={() => handleCopySnippet(snippet.code, snippet.id)}
-                            className={`p-2.5 rounded-lg transition-all duration-300 cursor-pointer group/copy border ${
-                              copiedSnippetId === snippet.id
-                                ? 'text-green-500 bg-green-500/10 border-green-500/30'
-                                : 'text-gray-400 hover:text-green-500 hover:bg-green-500/10 border-transparent hover:border-green-500/30'
-                            }`}
-                            title="Copy Code"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            {copiedSnippetId === snippet.id ? (
-                              <svg className="w-5 h-5 group-hover/copy:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path d="M5 13l4 4L19 7"/>
-                              </svg>
-                            ) : (
-                              <svg className="w-5 h-5 group-hover/copy:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
-                              </svg>
-                            )}
-                          </motion.button>
-                          <motion.button
-                            onClick={() => startEditing(snippet)}
-                            className="p-2.5 text-gray-400 hover:text-yellow-500 hover:bg-yellow-500/10 rounded-lg transition-all duration-300 cursor-pointer group/edit border border-transparent hover:border-yellow-500/30"
-                            title="Edit Snippet"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <svg className="w-5 h-5 group-hover/edit:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                              <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                            </svg>
-                          </motion.button>
-                          <motion.button
-                            onClick={() => handleDeleteClick(snippet)}
-                            className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-300 cursor-pointer group/delete border border-transparent hover:border-red-500/30"
-                            title="Delete Snippet"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <svg className="w-5 h-5 group-hover/delete:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                            </svg>
-                          </motion.button>
-                        </div>
-                      </div>
-
-                      {/* Footer Section */}
-                      <div className="px-3 py-2 bg-gray-900/50 border-t border-gray-600/50">
-                        <div className="text-xs text-gray-400">
-                          <div className="flex items-center gap-1.5">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3M19 19H5V5H19V19Z"/>
-                              <path d="M12 6V18M6 12H18"/>
-                            </svg>
-                            <span>Created {createdDate.toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}</span>
-                          </div>
-                          {isUpdated && (
-                            <div className="flex items-center gap-1.5 mt-1 text-blue-600">
-                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2M21 9V7L15 1H5C3.89 1 3 1.89 3 3V21C3 22.11 3.89 23 5 23H11V21H5V3H13V9H21Z"/>
-                              </svg>
-                              <span>Updated {updatedDate.toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric', 
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}</span>
+                <div className="p-6">
+                  <div className={`grid gap-6 ${
+                    recentSnippets.length === 1 ? 'grid-cols-1' :
+                    recentSnippets.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                    recentSnippets.length === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
+                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                  }`}>
+                    <AnimatePresence>
+                      {recentSnippets.map((snippet) => (
+                        <motion.div
+                          key={snippet.id}
+                          className="relative group cursor-pointer"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4, delay: 0.1 }}
+                          whileHover={{ scale: 1.02 }}
+                        >
+                          {/* Main Card */}
+                          <div className="bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-blue-500/50 shadow-lg hover:shadow-blue-500/20 hover:border-blue-400/70 transition-all duration-300 overflow-hidden h-full flex flex-col">
+                            {/* Header Section */}
+                            <div className="relative p-4 border-b border-gray-600/50">
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-l-2xl"></div>
+                              <div className="ml-3">
+                                <h3 className="text-lg font-bold text-white mb-1 group-hover:text-blue-400 transition-colors" title={snippet.title}>
+                                  {snippet.title}
+                                </h3>
+                                
+                                {snippet.description && (
+                                  <>
+                                    <div className="h-px bg-gradient-to-r from-gray-600/40 to-transparent my-2"></div>
+                                    <p className="text-gray-300 text-sm leading-relaxed" title={snippet.description}>
+                                      {snippet.description}
+                                    </p>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )
-                })}
-                </div>
+
+                            {/* Footer */}
+                            <div className="px-4 py-3 mt-auto border-t border-gray-600/30">
+                              <div className="flex items-center justify-center gap-1 text-gray-500 text-xs">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span>Created {new Date(snippet.created_at).toLocaleDateString('en-US', { 
+                                  month: 'short', 
+                                  day: 'numeric', 
+                                  year: 'numeric'
+                                })}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Overlay with Search Icon */}
+                          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                            <motion.button
+                              onClick={() => {
+                                setSearchTerm(snippet.title)
+                                // Focus on search input if it exists
+                                setTimeout(() => {
+                                  const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
+                                  if (searchInput) {
+                                    searchInput.focus()
+                                  }
+                                }, 100)
+                              }}
+                              className="p-4 bg-blue-600 hover:bg-blue-700 rounded-full shadow-lg transition-all duration-300 cursor-pointer"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              title="Search for this snippet"
+                            >
+                              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                              </svg>
+                            </motion.button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
                 </div>
               </div>
             </div>
@@ -854,37 +770,41 @@ function SnippetsUserContent({ useUser }: any) {
             background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.05) 100%)',
             border: '1px solid #0f172a'
           }} className="backdrop-blur-xl rounded-3xl overflow-hidden shadow-xl">
-            {/* Accordion Header */}
-            <button
-              onClick={() => setShowAllSnippets(!showAllSnippets)}
-              className="w-full p-6 text-left flex items-center justify-between hover:bg-white/5 transition-colors duration-200 cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                  <svg className="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            {/* Header */}
+            <div className="p-6 border-b border-gray-600/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg">
+                    <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">All Snippets</h2>
+                    <p className="text-gray-400">Browse and manage all your code snippets</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAllSnippets(!showAllSnippets)}
+                  className="p-2 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 hover:border-gray-500/70 rounded-lg transition-all duration-300 cursor-pointer"
+                >
+                  <svg className={`w-5 h-5 text-gray-400 hover:text-white transition-all duration-200 ${showAllSnippets ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 9l-7 7-7-7"/>
                   </svg>
-                  All Snippets
-                </h2>
-                <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm font-medium rounded-full">
-                  {filteredSnippets.length} total
-                </span>
+                </button>
               </div>
-              <svg 
-                className={`w-6 h-6 text-gray-400 transition-transform duration-200 ${showAllSnippets ? 'rotate-180' : ''}`} 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path d="M19 9l-7 7-7-7"/>
-              </svg>
-            </button>
+            </div>
 
             {/* Accordion Content */}
             <div className={`transition-all duration-300 overflow-hidden ${showAllSnippets ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="p-6 pt-0">
+              <div className="p-6 ">
                 {filteredSnippets.length > 0 ? (
-                  <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                  <div className={`grid gap-6 ${
+                    filteredSnippets.length === 1 ? 'grid-cols-1' :
+                    filteredSnippets.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                    filteredSnippets.length === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
+                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                  }`}>
           {filteredSnippets.map((snippet) => {
             const createdDate = new Date(snippet.created_at)
             const updatedDate = new Date(snippet.updated_at)
@@ -894,25 +814,25 @@ function SnippetsUserContent({ useUser }: any) {
             return (
               <motion.div
                 key={snippet.id}
-                className="bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-600/60 shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden hover:border-blue-300/50 h-full flex flex-col"
+                className="bg-gradient-to-br from-gray-800/95 via-gray-800/90 to-gray-900/95 backdrop-blur-sm rounded-2xl border border-blue-500/60 shadow-xl hover:shadow-2xl hover:shadow-blue-500/30 hover:border-blue-400/80 transition-all duration-150 group overflow-hidden h-full flex flex-col hover:bg-gradient-to-br hover:from-gray-700/95 hover:via-gray-700/90 hover:to-gray-800/95"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.3, delay: 0.05 }}
+                whileHover={{ scale: 1.01 }}
               >
                 {/* Header Section with Beautiful Partition */}
-                <div className="relative p-3 border-b border-gray-600/50">
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-l-2xl"></div>
+                <div className="relative p-4 border-b border-gray-600/30 bg-gradient-to-r from-transparent via-blue-500/5 to-transparent">
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500 rounded-l-2xl shadow-lg"></div>
                   <div className="ml-4">
-                    <h3 className="text-lg font-bold text-white mb-1 group-hover:text-blue-400 transition-colors truncate" title={snippet.title}>
-                      {snippet.title.length > 20 ? snippet.title.substring(0, 20) + '...' : snippet.title}
+                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-300 transition-colors duration-150 truncate" title={snippet.title}>
+                      {snippet.title.length > 25 ? snippet.title.substring(0, 25) + '...' : snippet.title}
                     </h3>
                     
                     {snippet.description && (
                       <>
-                        <div className="h-px bg-gradient-to-r from-gray-600/40 to-transparent my-2"></div>
-                        <p className="text-gray-300 text-sm leading-relaxed" title={snippet.description}>
-                          {snippet.description.length > 50 ? snippet.description.substring(0, 50) + '...' : snippet.description}
+                        <div className="h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent my-2"></div>
+                        <p className="text-gray-300 text-sm leading-relaxed group-hover:text-gray-200 transition-colors duration-150" title={snippet.description}>
+                          {snippet.description.length > 60 ? snippet.description.substring(0, 60) + '...' : snippet.description}
                         </p>
                       </>
                     )}
@@ -920,17 +840,17 @@ function SnippetsUserContent({ useUser }: any) {
                 </div>
 
                 {/* Language and Tags Section */}
-                <div className="px-3 py-1.5 bg-gray-900/30 border-b border-gray-600/30">
+                <div className="px-4 py-2 bg-gradient-to-r from-gray-900/40 via-gray-800/30 to-gray-900/40 border-b border-gray-600/20">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-lg border border-blue-200">
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                    <span className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-300 text-xs font-semibold rounded-full border border-blue-400/30 shadow-lg backdrop-blur-sm">
+                      <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                       </svg>
                       {snippet.language}
                     </span>
                     {snippet.is_public && (
-                      <span className="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-lg border border-green-200">
-                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                      <span className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 text-xs font-semibold rounded-full border border-green-400/30 shadow-lg backdrop-blur-sm">
+                        <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                         </svg>
                         Public
@@ -941,12 +861,12 @@ function SnippetsUserContent({ useUser }: any) {
 
                 {/* Code Section */}
                 <div className="p-4 flex-1">
-                  <div className="bg-gray-900/80 rounded-xl p-3 border border-gray-700/50 h-full">
+                  <div className="bg-gradient-to-br from-gray-900/90 via-gray-800/80 to-gray-900/90 rounded-xl p-3 border border-gray-600/40 shadow-inner h-full backdrop-blur-sm">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Code Preview</span>
-                      <span className="text-xs text-gray-500">{snippet.code.split('\n').length} lines</span>
+                      <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">Code Preview</span>
+                      <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded-full">{snippet.code.split('\n').length} lines</span>
                     </div>
-                    <pre className="text-xs text-gray-300 whitespace-pre-wrap overflow-hidden font-mono leading-relaxed max-h-32">
+                    <pre className="text-xs text-gray-200 whitespace-pre-wrap overflow-hidden font-mono leading-relaxed max-h-28 modal-scroll bg-black/20 p-2 rounded-lg border border-gray-700/30">
                       <code>{snippet.code}</code>
                     </pre>
                   </div>
@@ -956,10 +876,10 @@ function SnippetsUserContent({ useUser }: any) {
                 {snippet.tags && snippet.tags.length > 0 && (
                   <div className="px-4 pb-3">
                     <div className="flex flex-wrap gap-1.5">
-                      {snippet.tags.map((tag, index) => (
+                      {snippet.tags.slice(0, 3).map((tag, index) => (
                         <span
                           key={index}
-                          className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-200 transition-colors"
+                          className="inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 text-xs font-medium rounded-full border border-purple-400/30 hover:from-purple-500/30 hover:to-pink-500/30 transition-all duration-150 shadow-sm backdrop-blur-sm"
                         >
                           <svg className="w-2.5 h-2.5 mr-1" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12.5 2C6.5 2 2 6.5 2 12.5S6.5 23 12.5 23 23 18.5 23 12.5 18.5 2 12.5 2M12.5 20C8.4 20 5 16.6 5 12.5S8.4 5 12.5 5 20 8.4 20 12.5 16.6 20 12.5 20M12.5 8C10.6 8 9 9.6 9 11.5S10.6 15 12.5 15 16 13.4 16 11.5 14.4 8 12.5 8Z"/>
@@ -967,42 +887,47 @@ function SnippetsUserContent({ useUser }: any) {
                           {tag}
                         </span>
                       ))}
+                      {snippet.tags.length > 3 && (
+                        <span className="inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-gray-600/30 to-gray-700/30 text-gray-300 text-xs font-medium rounded-full border border-gray-500/40 shadow-sm backdrop-blur-sm">
+                          +{snippet.tags.length - 3}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {/* Action Icons Section */}
-                <div className="px-3 pb-3">
-                  <div className="flex justify-center gap-2 p-2 bg-gray-900/40 border border-gray-700/50 rounded-xl">
+                <div className="px-4 pb-3">
+                  <div className="flex justify-center gap-2 p-2 bg-gradient-to-r from-gray-900/60 via-gray-800/40 to-gray-900/60 border border-gray-600/30 rounded-xl shadow-lg backdrop-blur-sm">
                     <motion.button
                       onClick={() => setViewingSnippet(snippet)}
-                      className="p-2.5 text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all duration-300 cursor-pointer group/view border border-transparent hover:border-blue-500/30"
+                      className="p-2.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/20 rounded-xl transition-all duration-150 cursor-pointer group/view border border-transparent hover:border-blue-400/40 shadow-sm hover:shadow-lg"
                       title="View Snippet"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      <svg className="w-5 h-5 group-hover/view:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 group-hover/view:scale-110 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                         <circle cx="12" cy="12" r="3"/>
                       </svg>
                     </motion.button>
                     <motion.button
                       onClick={() => handleCopySnippet(snippet.code, snippet.id)}
-                      className={`p-2.5 rounded-lg transition-all duration-300 cursor-pointer group/copy border ${
+                      className={`p-2.5 rounded-xl transition-all duration-150 cursor-pointer group/copy border shadow-sm hover:shadow-lg ${
                         copiedSnippetId === snippet.id
-                          ? 'text-green-500 bg-green-500/10 border-green-500/30'
-                          : 'text-gray-400 hover:text-green-500 hover:bg-green-500/10 border-transparent hover:border-green-500/30'
+                          ? 'text-green-400 bg-green-500/20 border-green-400/40'
+                          : 'text-gray-400 hover:text-green-400 hover:bg-green-500/20 border-transparent hover:border-green-400/40'
                       }`}
                       title="Copy Code"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
                       {copiedSnippetId === snippet.id ? (
-                        <svg className="w-5 h-5 group-hover/copy:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 group-hover/copy:scale-110 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path d="M5 13l4 4L19 7"/>
                         </svg>
                       ) : (
-                        <svg className="w-5 h-5 group-hover/copy:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 group-hover/copy:scale-110 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
                           <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
                         </svg>
@@ -1010,24 +935,24 @@ function SnippetsUserContent({ useUser }: any) {
                     </motion.button>
                     <motion.button
                       onClick={() => startEditing(snippet)}
-                      className="p-2.5 text-gray-400 hover:text-yellow-500 hover:bg-yellow-500/10 rounded-lg transition-all duration-300 cursor-pointer group/edit border border-transparent hover:border-yellow-500/30"
+                      className="p-2.5 text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/20 rounded-xl transition-all duration-150 cursor-pointer group/edit border border-transparent hover:border-yellow-400/40 shadow-sm hover:shadow-lg"
                       title="Edit Snippet"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      <svg className="w-5 h-5 group-hover/edit:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 group-hover/edit:scale-110 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                       </svg>
                     </motion.button>
                     <motion.button
                       onClick={() => handleDeleteClick(snippet)}
-                      className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-300 cursor-pointer group/delete border border-transparent hover:border-red-500/30"
+                      className="p-2.5 text-gray-400 hover:text-red-400 hover:bg-red-500/20 rounded-xl transition-all duration-150 cursor-pointer group/delete border border-transparent hover:border-red-400/40 shadow-sm hover:shadow-lg"
                       title="Delete Snippet"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      <svg className="w-5 h-5 group-hover/delete:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 group-hover/delete:scale-110 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                       </svg>
                     </motion.button>
@@ -1035,32 +960,28 @@ function SnippetsUserContent({ useUser }: any) {
                 </div>
 
                 {/* Footer Section */}
-                <div className="px-3 py-2 bg-gray-900/50 border-t border-gray-600/50">
+                <div className="px-4 py-3 bg-gradient-to-r from-gray-900/60 via-gray-800/40 to-gray-900/60 border-t border-gray-600/30">
                   <div className="text-xs text-gray-400">
-                    <div className="flex items-center gap-1.5">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center justify-center gap-2">
+                      <svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3M19 19H5V5H19V19Z"/>
                         <path d="M12 6V18M6 12H18"/>
                       </svg>
-                      <span>Created {createdDate.toLocaleDateString('en-US', { 
+                      <span className="bg-gray-800/50 px-2 py-1 rounded-full border border-gray-600/30">Created {createdDate.toLocaleDateString('en-US', { 
                         month: 'short', 
                         day: 'numeric', 
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                        year: 'numeric'
                       })}</span>
                     </div>
                     {isUpdated && (
-                      <div className="flex items-center gap-1.5 mt-1 text-blue-600">
+                      <div className="flex items-center justify-center gap-2 mt-2 text-blue-400">
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2M21 9V7L15 1H5C3.89 1 3 1.89 3 3V21C3 22.11 3.89 23 5 23H11V21H5V3H13V9H21Z"/>
                         </svg>
-                        <span>Updated {updatedDate.toLocaleDateString('en-US', { 
+                        <span className="bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/30">Updated {updatedDate.toLocaleDateString('en-US', { 
                           month: 'short', 
                           day: 'numeric', 
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
+                          year: 'numeric'
                         })}</span>
                       </div>
                     )}
@@ -1194,7 +1115,7 @@ function SnippetsUserContent({ useUser }: any) {
                   )}
                 </button>
               </div>
-              <pre className="text-gray-300 text-sm leading-relaxed overflow-x-auto">
+              <pre className="text-gray-300 text-sm leading-relaxed overflow-x-auto modal-scroll">
                 <code>{viewingSnippet.code}</code>
               </pre>
             </div>

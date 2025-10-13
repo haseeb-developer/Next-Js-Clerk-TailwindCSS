@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Snippet } from '@/lib/supabase'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 interface ExportModalProps {
   isOpen: boolean
@@ -15,6 +16,9 @@ export function ExportModal({ isOpen, onClose, snippets, onShowToast }: ExportMo
   const [selectedSnippets, setSelectedSnippets] = useState<Set<string>>(new Set())
   const [selectAll, setSelectAll] = useState(false)
   const [exportFormat, setExportFormat] = useState<'json' | 'txt' | 'md'>('json')
+  
+  // Lock body scroll when modal is open
+  useBodyScrollLock(isOpen)
 
   useEffect(() => {
     if (isOpen) {
@@ -240,7 +244,7 @@ export function ExportModal({ isOpen, onClose, snippets, onShowToast }: ExportMo
                 <h3 className="text-lg font-semibold text-white mb-4">
                   Select Snippets ({selectedSnippets.size} selected)
                 </h3>
-                <div className="max-h-64 overflow-y-auto space-y-3 pr-2">
+                <div className="max-h-64 overflow-y-auto space-y-3 pr-2 modal-scroll">
                   {snippets.map((snippet) => (
                     <motion.label
                       key={snippet.id}
