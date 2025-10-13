@@ -9,6 +9,16 @@ body {
   background: #0F172A;
   color: var(--foreground);
   min-height: 100vh;
+  font-family: var(--font-poppins), system-ui, -apple-system, sans-serif;
+}
+
+/* Font family utilities */
+.font-poppins {
+  font-family: var(--font-poppins), system-ui, -apple-system, sans-serif;
+}
+
+.font-montserrat {
+  font-family: var(--font-montserrat), system-ui, -apple-system, sans-serif;
 }
 
 /* Add subtle grain texture for depth */

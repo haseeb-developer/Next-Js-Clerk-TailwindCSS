@@ -24,15 +24,15 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
               >
                 <div className="relative">
                   <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50">
-                    <span className="text-lg font-bold text-white">AD</span>
+                    <span className="text-lg font-bold text-white font-montserrat">CS</span>
                   </div>
                   <div className="absolute -inset-1 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur"></div>
                 </div>
                 <div className="hidden sm:block">
-                  <span className="bg-gradient-to-r from-white via-indigo-200 to-purple-200 bg-clip-text text-transparent font-extrabold text-2xl">
-                    Auth Diary
+                  <span className="bg-gradient-to-r from-white via-indigo-200 to-purple-200 bg-clip-text text-transparent font-extrabold text-2xl font-montserrat">
+                    Code Snippet Manager
                   </span>
-                  <div className="text-xs text-zinc-400 font-normal">Premium Experience</div>
+                  <div className="text-xs text-zinc-400 font-normal font-poppins">Professional Code Management</div>
                 </div>
               </Link>
             </div>
@@ -105,9 +105,9 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
               >
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="text-sm font-bold text-white">AD</span>
+                    <span className="text-sm font-bold text-white font-montserrat">CS</span>
                   </div>
-                  <span className="hidden sm:block">Auth Diary</span>
+                  <span className="hidden sm:block">Code Snippet Manager</span>
                 </div>
               </Link>
             </div>
@@ -139,15 +139,15 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
               >
                 <div className="relative">
                   <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50">
-                    <span className="text-lg font-bold text-white">AD</span>
+                    <span className="text-lg font-bold text-white font-montserrat">CS</span>
                   </div>
                   <div className="absolute -inset-1 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur"></div>
                 </div>
                 <div className="hidden sm:block">
-                  <span className="bg-gradient-to-r from-white via-indigo-200 to-purple-200 bg-clip-text text-transparent font-extrabold text-2xl">
-                    Auth Diary
+                  <span className="bg-gradient-to-r from-white via-indigo-200 to-purple-200 bg-clip-text text-transparent font-extrabold text-2xl font-montserrat">
+                    Code Snippet Manager
                   </span>
-                  <div className="text-xs text-zinc-400 font-normal">Premium Experience</div>
+                  <div className="text-xs text-zinc-400 font-normal font-poppins">Professional Code Management</div>
                 </div>
               </Link>
 
