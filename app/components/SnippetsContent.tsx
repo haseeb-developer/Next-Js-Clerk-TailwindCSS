@@ -878,7 +878,7 @@ function SnippetsUserContent({ useUser }: any) {
 
                 {/* 2. Description Section */}
                 {snippet.description && (
-                  <div className="p-4 border-b border-gray-600/30">
+                  <div className="border-b border-gray-600/30" style={{padding: '3px 14px'}}>
                     <p className="text-gray-300 text-sm leading-relaxed group-hover:text-gray-200 transition-colors duration-150" title={snippet.description}>
                       {snippet.description.length > 60 ? snippet.description.substring(0, 60) + '...' : snippet.description}
                     </p>
@@ -886,12 +886,12 @@ function SnippetsUserContent({ useUser }: any) {
                 )}
 
                 {/* 3. Action Icons Section */}
-                <div className="p-4 border-b border-gray-600/30">
-                  <div className="grid grid-cols-4 gap-2 p-2 bg-gradient-to-r from-gray-900/60 via-gray-800/40 to-gray-900/60 border border-gray-600/30 rounded-xl shadow-lg backdrop-blur-sm">
+                <div className="border-b border-gray-600/30">
+                  <div className="grid grid-cols-4 gap-2 p-2 bg-gradient-to-r from-gray-900/60 via-gray-800/40 to-gray-900/60 border border-gray-600/30 shadow-lg backdrop-blur-sm">
                     <motion.button
                       onClick={() => setViewingSnippet(snippet)}
-                      className="flex justify-center items-center p-2.5 text-blue-300 bg-blue-500/10 hover:text-blue-400 hover:bg-blue-500/20 rounded-xl transition-all duration-150 cursor-pointer group/view border border-blue-400/30 hover:border-blue-400/50 shadow-sm hover:shadow-lg"
-                      title="View Snippet"
+                      className="flex justify-center items-center p-2.5 text-blue-300 bg-blue-500/10 hover:text-blue-400 hover:bg-blue-500/20 rounded-xl transition-all duration-150 cursor-pointer group/view border border-blue-400/30 hover:border-blue-400/50 shadow-sm hover:shadow-lg relative"
+                      title="VIEW SNIPPET"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
@@ -899,15 +899,18 @@ function SnippetsUserContent({ useUser }: any) {
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                         <circle cx="12" cy="12" r="3"/>
                       </svg>
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/view:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        VIEW SNIPPET
+                      </div>
                     </motion.button>
                     <motion.button
                       onClick={() => handleCopySnippet(snippet.code, snippet.id)}
-                      className={`flex justify-center items-center p-2.5 rounded-xl transition-all duration-150 cursor-pointer group/copy border shadow-sm hover:shadow-lg ${
+                      className={`flex justify-center items-center p-2.5 rounded-xl transition-all duration-150 cursor-pointer group/copy border shadow-sm hover:shadow-lg relative ${
                         copiedSnippetId === snippet.id
                           ? 'text-green-400 bg-green-500/20 border-green-400/50'
                           : 'text-green-300 bg-green-500/10 border-green-400/30 hover:text-green-400 hover:bg-green-500/20 hover:border-green-400/50'
                       }`}
-                      title="Copy Code"
+                      title="COPY CODE"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
@@ -921,11 +924,14 @@ function SnippetsUserContent({ useUser }: any) {
                           <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
                         </svg>
                       )}
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/copy:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        COPY CODE
+                      </div>
                     </motion.button>
                     <motion.button
                       onClick={() => startEditing(snippet)}
-                      className="flex justify-center items-center p-2.5 text-yellow-300 bg-yellow-500/10 hover:text-yellow-400 hover:bg-yellow-500/20 rounded-xl transition-all duration-150 cursor-pointer group/edit border border-yellow-400/30 hover:border-yellow-400/50 shadow-sm hover:shadow-lg"
-                      title="Edit Snippet"
+                      className="flex justify-center items-center p-2.5 text-yellow-300 bg-yellow-500/10 hover:text-yellow-400 hover:bg-yellow-500/20 rounded-xl transition-all duration-150 cursor-pointer group/edit border border-yellow-400/30 hover:border-yellow-400/50 shadow-sm hover:shadow-lg relative"
+                      title="EDIT SNIPPET"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
@@ -933,58 +939,45 @@ function SnippetsUserContent({ useUser }: any) {
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                       </svg>
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-yellow-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/edit:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        EDIT SNIPPET
+                      </div>
                     </motion.button>
                     <motion.button
                       onClick={() => handleDeleteClick(snippet)}
-                      className="flex justify-center items-center p-2.5 text-red-300 bg-red-500/10 hover:text-red-400 hover:bg-red-500/20 rounded-xl transition-all duration-150 cursor-pointer group/delete border border-red-400/30 hover:border-red-400/50 shadow-sm hover:shadow-lg"
-                      title="Delete Snippet"
+                      className="flex justify-center items-center p-2.5 text-red-300 bg-red-500/10 hover:text-red-400 hover:bg-red-500/20 rounded-xl transition-all duration-150 cursor-pointer group/delete border border-red-400/30 hover:border-red-400/50 shadow-sm hover:shadow-lg relative"
+                      title="DELETE SNIPPET"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
                       <svg className="w-4 h-4 group-hover/delete:scale-110 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                       </svg>
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/delete:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        DELETE SNIPPET
+                      </div>
                     </motion.button>
                   </div>
                 </div>
 
-                {/* 4. Code Preview Section */}
-                <div className="p-4 flex-1 border-b border-gray-600/30">
-                  <div className="bg-gradient-to-br from-gray-900/90 via-gray-800/80 to-gray-900/90 rounded-xl p-3 border border-gray-600/40 shadow-inner h-full backdrop-blur-sm">
+                {/* 4. Language Preview Section */}
+                <div className="flex-1 border-b border-gray-600/30">
+                  <div className="bg-gradient-to-br from-gray-900/90 via-gray-800/80 to-gray-900/90 p-3 border border-gray-600/40 shadow-inner h-full backdrop-blur-sm">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">Code Preview</span>
+                      <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">{snippet.language} CODE</span>
                       <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded-full">{snippet.code.split('\n').length} lines</span>
                     </div>
-                    <pre className="text-xs text-gray-200 whitespace-pre-wrap overflow-hidden font-mono leading-relaxed max-h-28 modal-scroll bg-black/20 p-2 rounded-lg border border-gray-700/30">
-                      <code>{snippet.code}</code>
-                    </pre>
+                    <div className="bg-black/20 p-3 rounded-lg border border-gray-700/30">
+                      <pre className="text-xs text-gray-200 whitespace-pre-wrap overflow-hidden font-mono leading-relaxed">
+                        <code>{snippet.code.split('\n').slice(0, 3).join('\n')}</code>
+                      </pre>
+                    </div>
                   </div>
                 </div>
 
-                {/* 5. Language Section */}
-                <div className="p-4 bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-blue-500/10 border border-blue-500/20 border-b border-gray-600/30">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider">Language:</span>
-                    <span className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-300 text-xs font-semibold rounded-full border border-blue-400/30 shadow-lg backdrop-blur-sm">
-                      <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                      </svg>
-                      {snippet.language}
-                    </span>
-                    {snippet.is_public && (
-                      <span className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 text-xs font-semibold rounded-full border border-green-400/30 shadow-lg backdrop-blur-sm">
-                        <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                        </svg>
-                        Public
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* 6. Tags Section */}
+                {/* 5. Tags Section */}
                 {snippet.tags && snippet.tags.length > 0 && (
-                  <div className="p-4 bg-gradient-to-r from-purple-500/10 via-pink-500/5 to-purple-500/10 border border-purple-500/20 border-b border-gray-600/30">
+                  <div className="bg-gradient-to-r from-purple-500/10 via-pink-500/5 to-purple-500/10 border border-purple-500/20 border-b border-gray-600/30" style={{padding: '10px 17px'}}>
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-semibold text-purple-300 uppercase tracking-wider">Tags:</span>
                       <div className="flex flex-wrap gap-1.5">
@@ -1009,7 +1002,7 @@ function SnippetsUserContent({ useUser }: any) {
                   </div>
                 )}
 
-                {/* 7. Footer Section - Created and Updated */}
+                {/* 6. Footer Section - Created and Updated */}
                 <div className="p-4 bg-gradient-to-r from-gray-900/60 via-gray-800/40 to-gray-900/60 border-t border-gray-600/30 mt-auto">
                   <div className="flex items-center justify-between text-xs text-gray-400">
                     <div className="flex items-center gap-2">
