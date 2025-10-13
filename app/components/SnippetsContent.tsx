@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import Link from 'next/link'
 import { supabase, type Snippet, type CreateSnippetData } from '../../lib/supabase'
 import { Toast, ToastContainer } from './Toast'
 import { DeleteConfirmationModal } from './DeleteConfirmationModal'
@@ -102,8 +101,40 @@ function SnippetsUserContent({ useUser }: any) {
           const [showExportModal, setShowExportModal] = useState(false)
           const [showImportModal, setShowImportModal] = useState(false)
           
-          // Check if new schema is available
-          const [hasNewSchema, setHasNewSchema] = useState<boolean | null>(null)
+  // Form validation states
+  const [titleError, setTitleError] = useState('')
+  
+  // Search input ref
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  
+  // Check if new schema is available
+  const [hasNewSchema, setHasNewSchema] = useState<boolean | null>(null)
+
+  // Validation function
+  const validateForm = () => {
+    setTitleError('')
+    
+    if (formData.title.trim().length < 5) {
+      setTitleError('Title must be at least 5 characters long')
+      return false
+    }
+    
+    return true
+  }
+
+  // Keyboard shortcut handler for search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+K or Cmd+K to focus search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Form state
   const [formData, setFormData] = useState<CreateSnippetData>({
@@ -218,6 +249,9 @@ function SnippetsUserContent({ useUser }: any) {
     e.preventDefault()
     if (!user) return
 
+    // Validate form
+    if (!validateForm()) return
+
     try {
       const { error } = await supabase
         .from('snippets')
@@ -246,6 +280,9 @@ function SnippetsUserContent({ useUser }: any) {
   const handleUpdateSnippet = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingSnippet) return
+
+    // Validate form
+    if (!validateForm()) return
 
     try {
       const { error } = await supabase
@@ -524,17 +561,6 @@ function SnippetsUserContent({ useUser }: any) {
                 </p>
               </div>
               <div className="flex gap-3">
-                {/* Credits Button */}
-                <Link
-                  href="/credits"
-                  className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-xl hover:from-indigo-600 hover:to-blue-600 transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105 cursor-pointer flex items-center gap-1.5"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                  </svg>
-                  Credits
-                </Link>
-
                 {/* Import Button */}
                 <button
                   onClick={() => setShowImportModal(true)}
@@ -587,7 +613,7 @@ function SnippetsUserContent({ useUser }: any) {
           className="mb-8 mx-5"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          transition={{ duration: 0.2, delay: 0 }}
         >
           <div style={{
             background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)',
@@ -598,19 +624,31 @@ function SnippetsUserContent({ useUser }: any) {
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: 0.3 }}
+                  transition={{ duration: 0.15, delay: 0 }}
                 >
                   <div className="relative">
                     <input
+                      ref={searchInputRef}
                       type="text"
-                      placeholder="Search snippets..."
+                      placeholder="Search snippets... (Ctrl+K)"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-4 py-3 pl-12 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 shadow-sm transition-all duration-200"
+                      className="w-full px-4 py-3 pl-12 pr-12 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 shadow-sm transition-all duration-200"
                     />
                     <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 hover:text-white transition-colors duration-200"
+                        title="Clear search"
+                      >
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               </div>
@@ -703,9 +741,9 @@ function SnippetsUserContent({ useUser }: any) {
                         <motion.div
                           key={snippet.id}
                           className="relative group cursor-pointer"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.4, delay: 0.1 }}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.15 }}
                           whileHover={{ scale: 1.02 }}
                         >
                           {/* Main Card */}
@@ -828,9 +866,9 @@ function SnippetsUserContent({ useUser }: any) {
               <motion.div
                 key={snippet.id}
                 className="bg-gradient-to-br from-gray-800/95 via-gray-800/90 to-gray-900/95 backdrop-blur-sm rounded-2xl border border-blue-500/60 shadow-xl hover:shadow-2xl hover:shadow-blue-500/30 hover:border-blue-400/80 transition-all duration-150 group overflow-hidden h-full flex flex-col hover:bg-gradient-to-br hover:from-gray-700/95 hover:via-gray-700/90 hover:to-gray-800/95"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.05 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.15 }}
                 whileHover={{ scale: 1.01 }}
               >
                 {/* 1. Title Section */}
@@ -1052,10 +1090,10 @@ function SnippetsUserContent({ useUser }: any) {
                 border: '1px solid #0f172a'
               }} 
               className="backdrop-blur-xl rounded-3xl p-8 shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto"
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
               onClick={(e) => e.stopPropagation()}
             >
             <div className="flex items-start justify-between mb-6 gap-4">
@@ -1170,10 +1208,10 @@ function SnippetsUserContent({ useUser }: any) {
                 border: '1px solid #0f172a'
               }} 
               className="backdrop-blur-xl rounded-3xl p-8 shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
             >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">
@@ -1205,15 +1243,25 @@ function SnippetsUserContent({ useUser }: any) {
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
                     Title * <span className="text-gray-400 text-xs">({formData.title.length}/20)</span>
+                    {titleError && <span className="text-red-400 text-xs ml-2">• {titleError}</span>}
                   </label>
                   <input
                     type="text"
                     required
+                    minLength={5}
                     maxLength={20}
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 shadow-sm transition-all duration-200"
-                    placeholder="Enter snippet title"
+                    onChange={(e) => {
+                      setFormData({ ...formData, title: e.target.value })
+                      // Clear error when user starts typing
+                      if (titleError) setTitleError('')
+                    }}
+                    className={`w-full px-4 py-3 bg-gray-800/90 border rounded-xl text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 shadow-sm transition-all duration-200 ${
+                      titleError 
+                        ? 'border-red-500/60 focus:ring-red-500/30 focus:border-red-400/50' 
+                        : 'border-gray-600/60 focus:ring-blue-500/30 focus:border-blue-400/50'
+                    }`}
+                    placeholder="Enter snippet title (minimum 5 characters)"
                   />
                 </div>
 

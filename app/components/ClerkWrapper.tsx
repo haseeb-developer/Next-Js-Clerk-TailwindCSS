@@ -179,52 +179,57 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                   <SignedIn>
                             <div className="flex items-center gap-6">
                               <Link 
-                                href="/dashboard" 
-                                className={`px-4 py-2 text-sm font-medium transition-all duration-300 relative group ${
+                                href="/dashboard"
+                                prefetch={true}
+                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
                                   isActive('/dashboard') 
-                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30' 
-                                    : 'text-zinc-300 hover:text-white'
+                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30' 
+                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 } rounded-lg`}
                               >
-                                <span className="relative z-10">Dashboard</span>
-                                {!isActive('/dashboard') && (
-                                  <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/30 to-zinc-600/30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                )}
+                                Dashboard
                               </Link>
                               <Link 
-                                href="/snippets" 
-                                className={`px-4 py-2 text-sm font-medium transition-all duration-300 relative group ${
+                                href="/snippets"
+                                prefetch={true}
+                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
                                   isActive('/snippets') 
-                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30' 
-                                    : 'text-zinc-300 hover:text-white'
+                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30' 
+                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 } rounded-lg`}
                               >
-                                <span className="relative z-10">Snippets</span>
-                                {!isActive('/snippets') && (
-                                  <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/30 to-zinc-600/30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                )}
+                                Snippets
                               </Link>
                               <Link 
-                                href="/user-settings" 
-                                className={`px-4 py-2 text-sm font-medium transition-all duration-300 relative group ${
+                                href="/user-settings"
+                                prefetch={true}
+                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
                                   isActive('/user-settings') 
-                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30' 
-                                    : 'text-zinc-300 hover:text-white'
+                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30' 
+                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 } rounded-lg`}
                               >
-                                <span className="relative z-10">Settings</span>
-                                {!isActive('/user-settings') && (
-                                  <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/30 to-zinc-600/30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                )}
+                                Settings
+                              </Link>
+                              <Link 
+                                href="/credits"
+                                prefetch={true}
+                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
+                                  isActive('/credits') 
+                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30' 
+                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
+                                } rounded-lg`}
+                              >
+                                Credits
                               </Link>
                       {UserInfo && <UserInfo />}
                       {UserButton && (
                         <UserButton 
                           appearance={{
                             elements: {
-                              avatarBox: "w-10 h-10 ring-2 ring-indigo-500/50 hover:ring-indigo-400/70 transition-all duration-300",
+                              avatarBox: "w-10 h-10 ring-2 ring-indigo-500/50 hover:ring-indigo-400/70 transition-all duration-150",
                               userButtonPopoverCard: "bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/50 shadow-2xl",
-                              userButtonPopoverActionButton: "text-zinc-300 hover:bg-zinc-800/50 hover:text-white transition-all duration-300",
+                              userButtonPopoverActionButton: "text-zinc-300 hover:bg-zinc-800/50 hover:text-white transition-colors duration-150",
                               userButtonPopoverActionButtonText: "text-zinc-300",
                               userButtonPopoverFooter: "hidden",
                             }
@@ -240,12 +245,12 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
               <div className="lg:hidden">
                 <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="relative w-12 h-12 bg-gradient-to-br from-zinc-700/50 to-zinc-600/50 rounded-xl flex items-center justify-center hover:from-zinc-600/70 hover:to-zinc-500/70 transition-all duration-300 group"
+                  className="relative w-12 h-12 bg-zinc-700/50 rounded-xl flex items-center justify-center hover:bg-zinc-600/70 transition-colors duration-150"
                 >
                   <div className="w-6 h-6 flex flex-col justify-center items-center">
-                    <span className={`block h-0.5 w-6 bg-white transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-1' : '-translate-y-1'}`}></span>
-                    <span className={`block h-0.5 w-6 bg-white transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
-                    <span className={`block h-0.5 w-6 bg-white transition-all duration-300 ${isMobileMenuOpen ? '-rotate-45 -translate-y-1' : 'translate-y-1'}`}></span>
+                    <span className={`block h-0.5 w-6 bg-white transition-all duration-150 ${isMobileMenuOpen ? 'rotate-45 translate-y-1' : '-translate-y-1'}`}></span>
+                    <span className={`block h-0.5 w-6 bg-white transition-all duration-150 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
+                    <span className={`block h-0.5 w-6 bg-white transition-all duration-150 ${isMobileMenuOpen ? '-rotate-45 -translate-y-1' : 'translate-y-1'}`}></span>
                   </div>
                 </button>
               </div>
@@ -278,10 +283,11 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                   <SignedIn>
                             <div className="space-y-4">
                               <Link 
-                                href="/dashboard" 
-                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-all duration-300 ${
+                                href="/dashboard"
+                                prefetch={true}
+                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
                                   isActive('/dashboard')
-                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30'
+                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
                                     : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 }`}
                                 onClick={() => setIsMobileMenuOpen(false)}
@@ -289,10 +295,11 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 Dashboard
                               </Link>
                               <Link 
-                                href="/snippets" 
-                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-all duration-300 ${
+                                href="/snippets"
+                                prefetch={true}
+                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
                                   isActive('/snippets')
-                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30'
+                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
                                     : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 }`}
                                 onClick={() => setIsMobileMenuOpen(false)}
@@ -300,15 +307,28 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 Snippets
                               </Link>
                               <Link 
-                                href="/user-settings" 
-                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-all duration-300 ${
+                                href="/user-settings"
+                                prefetch={true}
+                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
                                   isActive('/user-settings')
-                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30'
+                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
                                     : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 }`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                               >
                                 Settings
+                              </Link>
+                              <Link 
+                                href="/credits"
+                                prefetch={true}
+                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
+                                  isActive('/credits')
+                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
+                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
+                                }`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                              >
+                                Credits
                               </Link>
                       {UserInfo && (
                         <div className="px-6 py-4 border-t border-zinc-700/30">
