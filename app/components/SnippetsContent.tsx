@@ -733,8 +733,7 @@ function SnippetsUserContent({ useUser }: any) {
                   <div className={`grid gap-6 ${
                     recentSnippets.length === 1 ? 'grid-cols-1' :
                     recentSnippets.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-                    recentSnippets.length === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
-                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
                   }`}>
                     <AnimatePresence>
                       {recentSnippets.map((snippet) => (
@@ -853,8 +852,7 @@ function SnippetsUserContent({ useUser }: any) {
                   <div className={`grid gap-6 ${
                     filteredSnippets.length === 1 ? 'grid-cols-1' :
                     filteredSnippets.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-                    filteredSnippets.length === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
-                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
                   }`}>
           {filteredSnippets.map((snippet) => {
             const createdDate = new Date(snippet.created_at)
@@ -889,10 +887,10 @@ function SnippetsUserContent({ useUser }: any) {
 
                 {/* 3. Action Icons Section */}
                 <div className="p-4 border-b border-gray-600/30">
-                  <div className="flex justify-center gap-2 p-2 bg-gradient-to-r from-gray-900/60 via-gray-800/40 to-gray-900/60 border border-gray-600/30 rounded-xl shadow-lg backdrop-blur-sm">
+                  <div className="grid grid-cols-4 gap-2 p-2 bg-gradient-to-r from-gray-900/60 via-gray-800/40 to-gray-900/60 border border-gray-600/30 rounded-xl shadow-lg backdrop-blur-sm">
                     <motion.button
                       onClick={() => setViewingSnippet(snippet)}
-                      className="p-2.5 text-blue-300 bg-blue-500/10 hover:text-blue-400 hover:bg-blue-500/20 rounded-xl transition-all duration-150 cursor-pointer group/view border border-blue-400/30 hover:border-blue-400/50 shadow-sm hover:shadow-lg"
+                      className="flex justify-center items-center p-2.5 text-blue-300 bg-blue-500/10 hover:text-blue-400 hover:bg-blue-500/20 rounded-xl transition-all duration-150 cursor-pointer group/view border border-blue-400/30 hover:border-blue-400/50 shadow-sm hover:shadow-lg"
                       title="View Snippet"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -904,7 +902,7 @@ function SnippetsUserContent({ useUser }: any) {
                     </motion.button>
                     <motion.button
                       onClick={() => handleCopySnippet(snippet.code, snippet.id)}
-                      className={`p-2.5 rounded-xl transition-all duration-150 cursor-pointer group/copy border shadow-sm hover:shadow-lg ${
+                      className={`flex justify-center items-center p-2.5 rounded-xl transition-all duration-150 cursor-pointer group/copy border shadow-sm hover:shadow-lg ${
                         copiedSnippetId === snippet.id
                           ? 'text-green-400 bg-green-500/20 border-green-400/50'
                           : 'text-green-300 bg-green-500/10 border-green-400/30 hover:text-green-400 hover:bg-green-500/20 hover:border-green-400/50'
@@ -926,7 +924,7 @@ function SnippetsUserContent({ useUser }: any) {
                     </motion.button>
                     <motion.button
                       onClick={() => startEditing(snippet)}
-                      className="p-2.5 text-yellow-300 bg-yellow-500/10 hover:text-yellow-400 hover:bg-yellow-500/20 rounded-xl transition-all duration-150 cursor-pointer group/edit border border-yellow-400/30 hover:border-yellow-400/50 shadow-sm hover:shadow-lg"
+                      className="flex justify-center items-center p-2.5 text-yellow-300 bg-yellow-500/10 hover:text-yellow-400 hover:bg-yellow-500/20 rounded-xl transition-all duration-150 cursor-pointer group/edit border border-yellow-400/30 hover:border-yellow-400/50 shadow-sm hover:shadow-lg"
                       title="Edit Snippet"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -938,7 +936,7 @@ function SnippetsUserContent({ useUser }: any) {
                     </motion.button>
                     <motion.button
                       onClick={() => handleDeleteClick(snippet)}
-                      className="p-2.5 text-red-300 bg-red-500/10 hover:text-red-400 hover:bg-red-500/20 rounded-xl transition-all duration-150 cursor-pointer group/delete border border-red-400/30 hover:border-red-400/50 shadow-sm hover:shadow-lg"
+                      className="flex justify-center items-center p-2.5 text-red-300 bg-red-500/10 hover:text-red-400 hover:bg-red-500/20 rounded-xl transition-all duration-150 cursor-pointer group/delete border border-red-400/30 hover:border-red-400/50 shadow-sm hover:shadow-lg"
                       title="Delete Snippet"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
