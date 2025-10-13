@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 import { supabase, type Snippet, type CreateSnippetData } from '../../lib/supabase'
 import { Toast, ToastContainer } from './Toast'
 import { DeleteConfirmationModal } from './DeleteConfirmationModal'
@@ -255,6 +256,7 @@ function SnippetsUserContent({ useUser }: any) {
       if (error) throw error
 
       setEditingSnippet(null)
+      setShowCreateForm(false)
       setFormData({
         title: '',
         description: '',
@@ -522,6 +524,17 @@ function SnippetsUserContent({ useUser }: any) {
                 </p>
               </div>
               <div className="flex gap-3">
+                {/* Credits Button */}
+                <Link
+                  href="/credits"
+                  className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-xl hover:from-indigo-600 hover:to-blue-600 transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105 cursor-pointer flex items-center gap-1.5"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                  </svg>
+                  Credits
+                </Link>
+
                 {/* Import Button */}
                 <button
                   onClick={() => setShowImportModal(true)}
@@ -820,88 +833,28 @@ function SnippetsUserContent({ useUser }: any) {
                 transition={{ duration: 0.3, delay: 0.05 }}
                 whileHover={{ scale: 1.01 }}
               >
-                {/* Header Section with Beautiful Partition */}
-                <div className="relative p-4 border-b border-gray-600/30 bg-gradient-to-r from-transparent via-blue-500/5 to-transparent">
-                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500 rounded-l-2xl shadow-lg"></div>
-                  <div className="ml-4">
-                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-300 transition-colors duration-150 truncate" title={snippet.title}>
-                      {snippet.title.length > 25 ? snippet.title.substring(0, 25) + '...' : snippet.title}
-                    </h3>
-                    
-                    {snippet.description && (
-                      <>
-                        <div className="h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent my-2"></div>
-                        <p className="text-gray-300 text-sm leading-relaxed group-hover:text-gray-200 transition-colors duration-150" title={snippet.description}>
-                          {snippet.description.length > 60 ? snippet.description.substring(0, 60) + '...' : snippet.description}
-                        </p>
-                      </>
-                    )}
-                  </div>
+                {/* 1. Title Section */}
+                <div className="p-4 border-b border-gray-600/30">
+                  <h3 className="text-lg font-bold text-white group-hover:text-blue-300 transition-colors duration-150 truncate" title={snippet.title}>
+                    {snippet.title.length > 25 ? snippet.title.substring(0, 25) + '...' : snippet.title}
+                  </h3>
                 </div>
 
-                {/* Language and Tags Section */}
-                <div className="px-4 py-2 bg-gradient-to-r from-gray-900/40 via-gray-800/30 to-gray-900/40 border-b border-gray-600/20">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-300 text-xs font-semibold rounded-full border border-blue-400/30 shadow-lg backdrop-blur-sm">
-                      <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                      </svg>
-                      {snippet.language}
-                    </span>
-                    {snippet.is_public && (
-                      <span className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 text-xs font-semibold rounded-full border border-green-400/30 shadow-lg backdrop-blur-sm">
-                        <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                        </svg>
-                        Public
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Code Section */}
-                <div className="p-4 flex-1">
-                  <div className="bg-gradient-to-br from-gray-900/90 via-gray-800/80 to-gray-900/90 rounded-xl p-3 border border-gray-600/40 shadow-inner h-full backdrop-blur-sm">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">Code Preview</span>
-                      <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded-full">{snippet.code.split('\n').length} lines</span>
-                    </div>
-                    <pre className="text-xs text-gray-200 whitespace-pre-wrap overflow-hidden font-mono leading-relaxed max-h-28 modal-scroll bg-black/20 p-2 rounded-lg border border-gray-700/30">
-                      <code>{snippet.code}</code>
-                    </pre>
-                  </div>
-                </div>
-
-                {/* Tags Section */}
-                {snippet.tags && snippet.tags.length > 0 && (
-                  <div className="px-4 pb-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      {snippet.tags.slice(0, 3).map((tag, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 text-xs font-medium rounded-full border border-purple-400/30 hover:from-purple-500/30 hover:to-pink-500/30 transition-all duration-150 shadow-sm backdrop-blur-sm"
-                        >
-                          <svg className="w-2.5 h-2.5 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12.5 2C6.5 2 2 6.5 2 12.5S6.5 23 12.5 23 23 18.5 23 12.5 18.5 2 12.5 2M12.5 20C8.4 20 5 16.6 5 12.5S8.4 5 12.5 5 20 8.4 20 12.5 16.6 20 12.5 20M12.5 8C10.6 8 9 9.6 9 11.5S10.6 15 12.5 15 16 13.4 16 11.5 14.4 8 12.5 8Z"/>
-                          </svg>
-                          {tag}
-                        </span>
-                      ))}
-                      {snippet.tags.length > 3 && (
-                        <span className="inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-gray-600/30 to-gray-700/30 text-gray-300 text-xs font-medium rounded-full border border-gray-500/40 shadow-sm backdrop-blur-sm">
-                          +{snippet.tags.length - 3}
-                        </span>
-                      )}
-                    </div>
+                {/* 2. Description Section */}
+                {snippet.description && (
+                  <div className="p-4 border-b border-gray-600/30">
+                    <p className="text-gray-300 text-sm leading-relaxed group-hover:text-gray-200 transition-colors duration-150" title={snippet.description}>
+                      {snippet.description.length > 60 ? snippet.description.substring(0, 60) + '...' : snippet.description}
+                    </p>
                   </div>
                 )}
 
-                {/* Action Icons Section */}
-                <div className="px-4 pb-3">
+                {/* 3. Action Icons Section */}
+                <div className="p-4 border-b border-gray-600/30">
                   <div className="flex justify-center gap-2 p-2 bg-gradient-to-r from-gray-900/60 via-gray-800/40 to-gray-900/60 border border-gray-600/30 rounded-xl shadow-lg backdrop-blur-sm">
                     <motion.button
                       onClick={() => setViewingSnippet(snippet)}
-                      className="p-2.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/20 rounded-xl transition-all duration-150 cursor-pointer group/view border border-transparent hover:border-blue-400/40 shadow-sm hover:shadow-lg"
+                      className="p-2.5 text-blue-300 bg-blue-500/10 hover:text-blue-400 hover:bg-blue-500/20 rounded-xl transition-all duration-150 cursor-pointer group/view border border-blue-400/30 hover:border-blue-400/50 shadow-sm hover:shadow-lg"
                       title="View Snippet"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -915,8 +868,8 @@ function SnippetsUserContent({ useUser }: any) {
                       onClick={() => handleCopySnippet(snippet.code, snippet.id)}
                       className={`p-2.5 rounded-xl transition-all duration-150 cursor-pointer group/copy border shadow-sm hover:shadow-lg ${
                         copiedSnippetId === snippet.id
-                          ? 'text-green-400 bg-green-500/20 border-green-400/40'
-                          : 'text-gray-400 hover:text-green-400 hover:bg-green-500/20 border-transparent hover:border-green-400/40'
+                          ? 'text-green-400 bg-green-500/20 border-green-400/50'
+                          : 'text-green-300 bg-green-500/10 border-green-400/30 hover:text-green-400 hover:bg-green-500/20 hover:border-green-400/50'
                       }`}
                       title="Copy Code"
                       whileHover={{ scale: 1.05 }}
@@ -935,7 +888,7 @@ function SnippetsUserContent({ useUser }: any) {
                     </motion.button>
                     <motion.button
                       onClick={() => startEditing(snippet)}
-                      className="p-2.5 text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/20 rounded-xl transition-all duration-150 cursor-pointer group/edit border border-transparent hover:border-yellow-400/40 shadow-sm hover:shadow-lg"
+                      className="p-2.5 text-yellow-300 bg-yellow-500/10 hover:text-yellow-400 hover:bg-yellow-500/20 rounded-xl transition-all duration-150 cursor-pointer group/edit border border-yellow-400/30 hover:border-yellow-400/50 shadow-sm hover:shadow-lg"
                       title="Edit Snippet"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -947,7 +900,7 @@ function SnippetsUserContent({ useUser }: any) {
                     </motion.button>
                     <motion.button
                       onClick={() => handleDeleteClick(snippet)}
-                      className="p-2.5 text-gray-400 hover:text-red-400 hover:bg-red-500/20 rounded-xl transition-all duration-150 cursor-pointer group/delete border border-transparent hover:border-red-400/40 shadow-sm hover:shadow-lg"
+                      className="p-2.5 text-red-300 bg-red-500/10 hover:text-red-400 hover:bg-red-500/20 rounded-xl transition-all duration-150 cursor-pointer group/delete border border-red-400/30 hover:border-red-400/50 shadow-sm hover:shadow-lg"
                       title="Delete Snippet"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -959,10 +912,71 @@ function SnippetsUserContent({ useUser }: any) {
                   </div>
                 </div>
 
-                {/* Footer Section */}
-                <div className="px-4 py-3 bg-gradient-to-r from-gray-900/60 via-gray-800/40 to-gray-900/60 border-t border-gray-600/30">
-                  <div className="text-xs text-gray-400">
-                    <div className="flex items-center justify-center gap-2">
+                {/* 4. Code Preview Section */}
+                <div className="p-4 flex-1 border-b border-gray-600/30">
+                  <div className="bg-gradient-to-br from-gray-900/90 via-gray-800/80 to-gray-900/90 rounded-xl p-3 border border-gray-600/40 shadow-inner h-full backdrop-blur-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">Code Preview</span>
+                      <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded-full">{snippet.code.split('\n').length} lines</span>
+                    </div>
+                    <pre className="text-xs text-gray-200 whitespace-pre-wrap overflow-hidden font-mono leading-relaxed max-h-28 modal-scroll bg-black/20 p-2 rounded-lg border border-gray-700/30">
+                      <code>{snippet.code}</code>
+                    </pre>
+                  </div>
+                </div>
+
+                {/* 5. Language Section */}
+                <div className="p-4 bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-blue-500/10 border border-blue-500/20 border-b border-gray-600/30">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider">Language:</span>
+                    <span className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-300 text-xs font-semibold rounded-full border border-blue-400/30 shadow-lg backdrop-blur-sm">
+                      <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      </svg>
+                      {snippet.language}
+                    </span>
+                    {snippet.is_public && (
+                      <span className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 text-xs font-semibold rounded-full border border-green-400/30 shadow-lg backdrop-blur-sm">
+                        <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                        Public
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 6. Tags Section */}
+                {snippet.tags && snippet.tags.length > 0 && (
+                  <div className="p-4 bg-gradient-to-r from-purple-500/10 via-pink-500/5 to-purple-500/10 border border-purple-500/20 border-b border-gray-600/30">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold text-purple-300 uppercase tracking-wider">Tags:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {snippet.tags.slice(0, 3).map((tag, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 text-xs font-medium rounded-full border border-purple-400/30 hover:from-purple-500/30 hover:to-pink-500/30 transition-all duration-150 shadow-sm backdrop-blur-sm"
+                          >
+                            <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                            </svg>
+                            {tag}
+                          </span>
+                        ))}
+                        {snippet.tags.length > 3 && (
+                          <span className="inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-gray-600/30 to-gray-700/30 text-gray-300 text-xs font-medium rounded-full border border-gray-500/40 shadow-sm backdrop-blur-sm">
+                            +{snippet.tags.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 7. Footer Section - Created and Updated */}
+                <div className="p-4 bg-gradient-to-r from-gray-900/60 via-gray-800/40 to-gray-900/60 border-t border-gray-600/30 mt-auto">
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <div className="flex items-center gap-2">
                       <svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3M19 19H5V5H19V19Z"/>
                         <path d="M12 6V18M6 12H18"/>
@@ -974,7 +988,7 @@ function SnippetsUserContent({ useUser }: any) {
                       })}</span>
                     </div>
                     {isUpdated && (
-                      <div className="flex items-center justify-center gap-2 mt-2 text-blue-400">
+                      <div className="flex items-center gap-2 text-blue-400">
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2M21 9V7L15 1H5C3.89 1 3 1.89 3 3V21C3 22.11 3.89 23 5 23H11V21H5V3H13V9H21Z"/>
                         </svg>
