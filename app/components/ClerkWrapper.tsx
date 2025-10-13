@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export default function ClerkWrapper({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false)
@@ -15,7 +16,7 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
     return (
       <div className="min-h-screen">
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center h-20">
               <Link 
                 href="/dashboard" 
@@ -37,7 +38,7 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
             </div>
           </div>
         </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <main className="max-w-7xl mx-auto">
           {children}
         </main>
       </div>
@@ -49,6 +50,7 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
 }
 
 function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [ClerkProvider, setClerkProvider] = useState<React.ComponentType<any> | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,6 +66,14 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [UserInfo, setUserInfo] = useState<React.ComponentType<any> | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  // Helper function to check if a link is active
+  const isActive = (path: string) => {
+    if (path === '/dashboard') {
+      return pathname === '/dashboard'
+    }
+    return pathname.startsWith(path)
+  }
 
   useEffect(() => {
     // Dynamically import Clerk components only on client side
@@ -87,7 +97,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen">
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-zinc-900/80 border-b border-zinc-800/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center h-16">
               <Link 
                 href="/dashboard" 
@@ -103,7 +113,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <main className="max-w-7xl mx-auto">
           {children}
         </main>
       </div>
@@ -120,7 +130,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
     >
       <div className="min-h-screen">
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center h-20">
               {/* Logo Section */}
               <Link
@@ -167,21 +177,46 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                 )}
                 {SignedIn && (
                   <SignedIn>
-                    <div className="flex items-center gap-6">
-                      <Link 
-                        href="/dashboard" 
-                        className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-all duration-300 relative group"
-                      >
-                        <span className="relative z-10">Dashboard</span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/30 to-zinc-600/30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      </Link>
-                      <Link 
-                        href="/user-settings" 
-                        className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-all duration-300 relative group"
-                      >
-                        <span className="relative z-10">Settings</span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/30 to-zinc-600/30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      </Link>
+                            <div className="flex items-center gap-6">
+                              <Link 
+                                href="/dashboard" 
+                                className={`px-4 py-2 text-sm font-medium transition-all duration-300 relative group ${
+                                  isActive('/dashboard') 
+                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30' 
+                                    : 'text-zinc-300 hover:text-white'
+                                } rounded-lg`}
+                              >
+                                <span className="relative z-10">Dashboard</span>
+                                {!isActive('/dashboard') && (
+                                  <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/30 to-zinc-600/30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                )}
+                              </Link>
+                              <Link 
+                                href="/snippets" 
+                                className={`px-4 py-2 text-sm font-medium transition-all duration-300 relative group ${
+                                  isActive('/snippets') 
+                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30' 
+                                    : 'text-zinc-300 hover:text-white'
+                                } rounded-lg`}
+                              >
+                                <span className="relative z-10">Snippets</span>
+                                {!isActive('/snippets') && (
+                                  <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/30 to-zinc-600/30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                )}
+                              </Link>
+                              <Link 
+                                href="/user-settings" 
+                                className={`px-4 py-2 text-sm font-medium transition-all duration-300 relative group ${
+                                  isActive('/user-settings') 
+                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30' 
+                                    : 'text-zinc-300 hover:text-white'
+                                } rounded-lg`}
+                              >
+                                <span className="relative z-10">Settings</span>
+                                {!isActive('/user-settings') && (
+                                  <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/30 to-zinc-600/30 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                )}
+                              </Link>
                       {UserInfo && <UserInfo />}
                       {UserButton && (
                         <UserButton 
@@ -241,21 +276,40 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                 )}
                 {SignedIn && (
                   <SignedIn>
-                    <div className="space-y-4">
-                      <Link 
-                        href="/dashboard" 
-                        className="block px-6 py-4 text-base font-medium text-zinc-300 hover:text-white hover:bg-zinc-700/30 rounded-xl transition-all duration-300"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        Dashboard
-                      </Link>
-                      <Link 
-                        href="/user-settings" 
-                        className="block px-6 py-4 text-base font-medium text-zinc-300 hover:text-white hover:bg-zinc-700/30 rounded-xl transition-all duration-300"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        Settings
-                      </Link>
+                            <div className="space-y-4">
+                              <Link 
+                                href="/dashboard" 
+                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-all duration-300 ${
+                                  isActive('/dashboard')
+                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30'
+                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
+                                }`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                              >
+                                Dashboard
+                              </Link>
+                              <Link 
+                                href="/snippets" 
+                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-all duration-300 ${
+                                  isActive('/snippets')
+                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30'
+                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
+                                }`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                              >
+                                Snippets
+                              </Link>
+                              <Link 
+                                href="/user-settings" 
+                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-all duration-300 ${
+                                  isActive('/user-settings')
+                                    ? 'text-white bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30'
+                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
+                                }`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                              >
+                                Settings
+                              </Link>
                       {UserInfo && (
                         <div className="px-6 py-4 border-t border-zinc-700/30">
                           <UserInfo />
@@ -268,7 +322,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <main className="max-w-7xl mx-auto">
           {children}
         </main>
       </div>

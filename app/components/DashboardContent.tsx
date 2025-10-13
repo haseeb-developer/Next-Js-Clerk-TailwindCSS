@@ -12,8 +12,8 @@ export default function DashboardContent() {
   // Show loading state until client-side hydration is complete
   if (!isClient) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 px-4">
-        <div className="w-full max-w-2xl">
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+        <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
@@ -50,8 +50,8 @@ function ClientDashboardContent() {
 
   if (!clerkComponents) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 px-4">
-        <div className="w-full max-w-2xl">
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+        <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
@@ -73,8 +73,8 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
 
   if (!isSignedIn || !user) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 px-4">
-        <div className="w-full max-w-2xl">
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+        <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
@@ -87,8 +87,8 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 px-4">
-      <div className="w-full max-w-2xl">
+    <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+      <div className="w-full max-w-[1800px] mx-auto mx-5">
         <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
           <div className="text-center">
             <div className="mb-8">

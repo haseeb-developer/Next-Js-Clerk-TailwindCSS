@@ -2,8 +2,8 @@ import { SignIn } from '@clerk/nextjs'
 
 export default function Page() {
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 px-4">
-      <div className="w-full max-w-md">
+    <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+              <div className="w-full max-w-md mx-auto mx-5">
         <div className="text-center mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Welcome Back</h1>
           <p className="text-zinc-400">Sign in to your account to continue</p>

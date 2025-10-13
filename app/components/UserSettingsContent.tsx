@@ -106,8 +106,8 @@ export default function UserSettingsContent() {
 
   if (!isClient) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 px-4">
-        <div className="w-full max-w-4xl">
+              <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+                <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
@@ -121,8 +121,8 @@ export default function UserSettingsContent() {
 
   if (!clerkComponents) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 px-4">
-        <div className="w-full max-w-4xl">
+              <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+                <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
@@ -144,8 +144,8 @@ function UserSettingsDisplay({ useUser, useAuth, deviceInfo, timeInfo }: any) {
 
   if (!isSignedIn || !user) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 px-4">
-        <div className="w-full max-w-4xl">
+              <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+                <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
               <p className="text-zinc-400">Please sign in to access settings.</p>
@@ -167,8 +167,8 @@ function UserSettingsDisplay({ useUser, useAuth, deviceInfo, timeInfo }: any) {
   }
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] py-12 px-4">
-      <div className="max-w-4xl mx-auto">
+            <div className="min-h-[calc(100vh-5rem)] py-12">
+              <div className="max-w-[1800px] mx-auto mx-5">
         {/* Header with greeting */}
         <div className="mb-8">
           <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-800/60 backdrop-blur-xl rounded-3xl p-8 border border-zinc-700/50 shadow-2xl shadow-black/20">

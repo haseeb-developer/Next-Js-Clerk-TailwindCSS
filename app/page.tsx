@@ -1,7 +1,7 @@
 export default function Home() {
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 px-4">
-      <div className="text-center max-w-4xl mx-auto">
+    <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+            <div className="text-center max-w-[1800px] mx-auto mx-5">
         <div className="mb-8">
           <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all hover:scale-105">
             <span className="text-2xl font-bold text-white">AD</span>
