@@ -11,7 +11,7 @@ export default function Home() {
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-6 tracking-tight">
           Welcome to{' '}
           <span className="bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text">
-            Auth Diary
+            Code Snippets
           </span>
         </h1>
         

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 import { supabase, type Snippet, type CreateSnippetData } from '../../lib/supabase'
 import { Toast, ToastContainer } from './Toast'
 import { DeleteConfirmationModal } from './DeleteConfirmationModal'
@@ -80,6 +81,7 @@ function SnippetsUserContent({ useUser }: any) {
           const [sortBy, setSortBy] = useState('newest')
           const [showRecentSnippets, setShowRecentSnippets] = useState(true)
           const [showAllSnippets, setShowAllSnippets] = useState(false)
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
           const [viewingSnippet, setViewingSnippet] = useState<Snippet | null>(null)
           
           // Lock body scroll when modals are open
@@ -143,11 +145,12 @@ function SnippetsUserContent({ useUser }: any) {
     code: '',
     language: '',
     tags: [],
-    is_public: false
+    is_public: false,
+    is_favorite: false
   })
 
   const fetchSnippets = useCallback(async () => {
-    if (!user) return
+    if (!user || !user.id) return
     
     try {
       // First try with deleted_at filter (new schema)
@@ -247,7 +250,7 @@ function SnippetsUserContent({ useUser }: any) {
 
   const handleCreateSnippet = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
+    if (!user || !user.id) return
 
     // Validate form
     if (!validateForm()) return
@@ -439,7 +442,7 @@ function SnippetsUserContent({ useUser }: any) {
 
   // Handle importing snippets
   const handleImportSnippets = useCallback(async (snippets: Omit<Snippet, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]) => {
-    if (!user) return
+    if (!user || !user.id) return
 
     try {
       const { error } = await supabase
@@ -487,6 +490,42 @@ function SnippetsUserContent({ useUser }: any) {
     }
   }, [addToast])
 
+  const toggleFavorite = useCallback(async (snippet: Snippet) => {
+    if (!user || !user.id) return
+
+    try {
+      const { error } = await supabase
+        .from('snippets')
+        .update({ 
+          is_favorite: !snippet.is_favorite,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', snippet.id)
+
+      if (error) throw error
+
+      // Update local state
+      setSnippets(prev => 
+        prev.map(s => 
+          s.id === snippet.id 
+            ? { ...s, is_favorite: !snippet.is_favorite, updated_at: new Date().toISOString() }
+            : s
+        )
+      )
+
+      addToast({
+        message: snippet.is_favorite ? 'Removed from favorites' : 'Added to favorites',
+        type: 'success'
+      })
+    } catch (error) {
+      console.error('Error toggling favorite:', error)
+      addToast({
+        message: 'Failed to update favorite status',
+        type: 'error'
+      })
+    }
+  }, [user, addToast])
+
   const startEditing = (snippet: Snippet) => {
     setEditingSnippet(snippet)
     setFormData({
@@ -495,7 +534,8 @@ function SnippetsUserContent({ useUser }: any) {
       code: snippet.code,
       language: snippet.language,
       tags: snippet.tags || [],
-      is_public: snippet.is_public
+      is_public: snippet.is_public,
+      is_favorite: snippet.is_favorite
     })
     setShowCreateForm(true)
   }
@@ -511,7 +551,8 @@ function SnippetsUserContent({ useUser }: any) {
                                  snippet.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                  snippet.code.toLowerCase().includes(searchTerm.toLowerCase())
             const matchesLanguage = !selectedLanguage || snippet.language === selectedLanguage
-            return matchesSearch && matchesLanguage
+            const matchesFavorites = !showFavoritesOnly || snippet.is_favorite
+            return matchesSearch && matchesLanguage && matchesFavorites
           }).sort((a, b) => {
             switch (sortBy) {
               case 'newest':
@@ -535,6 +576,38 @@ function SnippetsUserContent({ useUser }: any) {
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
               <p className="text-zinc-400 mt-4">Loading your snippets...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // If no user, show sign-in required message
+  if (!user) {
+    return (
+      <div className="min-h-[calc(100vh-5rem)] py-12">
+        <div className="max-w-[1800px] mx-auto">
+          <div className="mb-8 mx-5">
+            <div className="bg-[#111B32] border border-gray-700 rounded-3xl p-8 shadow-2xl">
+              <div className="text-center">
+                <h1 className="text-3xl font-bold text-white mb-4">Sign In Required</h1>
+                <p className="text-gray-400 mb-6">Please sign in to access your snippets.</p>
+                      <div className="flex gap-4 justify-center">
+                        <Link 
+                          href="/sign-in" 
+                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Sign In
+                        </Link>
+                        <Link 
+                          href="/choose-username" 
+                          className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                        >
+                          Continue as Guest
+                        </Link>
+                      </div>
+              </div>
             </div>
           </div>
         </div>
@@ -666,6 +739,23 @@ function SnippetsUserContent({ useUser }: any) {
                   </div>
                 </div>
                 
+                {/* Favorites Filter */}
+                <div className="relative">
+                  <select
+                    value={showFavoritesOnly ? 'favorites' : 'all'}
+                    onChange={(e) => setShowFavoritesOnly(e.target.value === 'favorites')}
+                    className="w-40 px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
+                  >
+                    <option value="all">All Snippets</option>
+                    <option value="favorites">⭐ Favorites</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M19 9l-7 7-7-7"/>
+                    </svg>
+                  </div>
+                </div>
+                
                 {/* Sort Filter */}
                 <div className="relative">
                   <select
@@ -757,17 +847,33 @@ function SnippetsUserContent({ useUser }: any) {
                               </div>
                             </div>
 
-                            {/* Footer */}
+                            {/* Footer with Date */}
                             <div className="px-4 py-3 mt-auto border-t border-gray-600/30">
-                              <div className="flex items-center justify-center gap-1 text-gray-500 text-xs">
+                              <div className="flex items-center gap-2 text-gray-500 text-xs">
                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                <span>Created {new Date(snippet.created_at).toLocaleDateString('en-US', { 
+                                <span>
+                                  {(() => {
+                                    const createdDate = new Date(snippet.created_at)
+                                    const updatedDate = new Date(snippet.updated_at)
+                                    const isUpdated = updatedDate.getTime() - createdDate.getTime() > 1000
+                                    
+                                    if (isUpdated) {
+                                      return `Updated ${updatedDate.toLocaleDateString('en-US', { 
                                   month: 'short', 
                                   day: 'numeric', 
                                   year: 'numeric'
-                                })}</span>
+                                      })}`
+                                    } else {
+                                      return `Created ${createdDate.toLocaleDateString('en-US', { 
+                                        month: 'short', 
+                                        day: 'numeric', 
+                                        year: 'numeric'
+                                      })}`
+                                    }
+                                  })()}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -875,7 +981,7 @@ function SnippetsUserContent({ useUser }: any) {
 
                 {/* 3. Action Icons Section */}
                 <div className="border-b border-gray-600/30">
-                  <div className="grid grid-cols-4 gap-2 p-2 bg-gray-800 border border-gray-600 shadow-lg">
+                  <div className="grid grid-cols-5 gap-2 p-2 bg-gray-800 border border-gray-600 shadow-lg">
                     <motion.button
                       onClick={() => setViewingSnippet(snippet)}
                       className="flex justify-center items-center p-2.5 text-blue-300 bg-blue-500/10 hover:text-blue-400 hover:bg-blue-500/20 rounded-xl transition-all duration-150 cursor-pointer group/view border border-blue-400/30 hover:border-blue-400/50 shadow-sm hover:shadow-lg relative"
@@ -889,6 +995,27 @@ function SnippetsUserContent({ useUser }: any) {
                       </svg>
                       <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/view:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
                         VIEW SNIPPET
+                      </div>
+                    </motion.button>
+                    <motion.button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleFavorite(snippet)
+                      }}
+                      className={`flex justify-center items-center p-2.5 rounded-xl transition-all duration-150 cursor-pointer group/favorite border shadow-sm hover:shadow-lg relative ${
+                        snippet.is_favorite
+                          ? 'text-yellow-400 bg-yellow-500/20 border-yellow-400/50 hover:text-yellow-300 hover:bg-yellow-500/30'
+                          : 'text-yellow-300 bg-yellow-500/10 border-yellow-400/30 hover:text-yellow-400 hover:bg-yellow-500/20 hover:border-yellow-400/50'
+                      }`}
+                      title={snippet.is_favorite ? "REMOVE FROM FAVORITES" : "ADD TO FAVORITES"}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <svg className="w-4 h-4 group-hover/favorite:scale-110 transition-transform duration-150" fill={snippet.is_favorite ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                      </svg>
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-yellow-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/favorite:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        {snippet.is_favorite ? "REMOVE FROM FAVORITES" : "ADD TO FAVORITES"}
                       </div>
                     </motion.button>
                     <motion.button
@@ -1319,6 +1446,22 @@ function SnippetsUserContent({ useUser }: any) {
                   Make this snippet public
                 </label>
               </div>
+              
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="is_favorite"
+                  checked={formData.is_favorite}
+                  onChange={(e) => setFormData({ ...formData, is_favorite: e.target.checked })}
+                  className="w-4 h-4 text-yellow-600 bg-gray-800 border-gray-600 rounded focus:ring-yellow-500 focus:ring-2 transition-all duration-200"
+                />
+                <label htmlFor="is_favorite" className="text-sm font-medium text-white flex items-center gap-2">
+                  <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                  </svg>
+                  Mark as favorite
+                </label>
+              </div>
 
               <div className="flex gap-4 pt-4">
                 <button
@@ -1393,7 +1536,7 @@ function SnippetsUserContent({ useUser }: any) {
         onClose={() => setShowRecycleBin(false)}
         onRestore={handleRestoreSnippet}
         onPermanentDelete={handlePermanentDelete}
-        userId={user.id}
+        userId={user?.id || ''}
         onShowToast={(message, type) => addToast({ message, type })}
       />
     </div>

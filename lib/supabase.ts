@@ -15,6 +15,7 @@ export interface Snippet {
   language: string
   tags?: string[]
   is_public: boolean
+  is_favorite: boolean
   user_id: string
   created_at: string
   updated_at: string
@@ -27,6 +28,7 @@ export interface CreateSnippetData {
   language: string
   tags?: string[]
   is_public?: boolean
+  is_favorite?: boolean
 }
 
 export interface UpdateSnippetData {
@@ -36,4 +38,5 @@ export interface UpdateSnippetData {
   language?: string
   tags?: string[]
   is_public?: boolean
+  is_favorite?: boolean
 }

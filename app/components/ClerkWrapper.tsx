@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 export default function ClerkWrapper({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false)
@@ -51,6 +51,7 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
 
 function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [ClerkProvider, setClerkProvider] = useState<React.ComponentType<any> | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,6 +67,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [UserInfo, setUserInfo] = useState<React.ComponentType<any> | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isGuest, setIsGuest] = useState(false)
 
   // Helper function to check if a link is active
   const isActive = (path: string) => {
@@ -89,7 +91,29 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
     import('./UserInfo').then((userInfo) => {
       setUserInfo(() => userInfo.default)
     })
-  }, [])
+    
+    // Check if user is in guest mode
+    const guestMode = localStorage.getItem('guestMode')
+    const username = localStorage.getItem('guestUsername')
+    
+    if (guestMode === 'true' && username) {
+      setIsGuest(true)
+      
+      // Redirect guest users away from auth pages
+      if (pathname === '/sign-in' || pathname === '/sign-up') {
+        router.push('/guest-mode-snippets')
+      }
+    } else {
+      setIsGuest(false)
+    }
+  }, [pathname, router])
+
+  const handleGuestSignOut = () => {
+    localStorage.removeItem('guestMode')
+    localStorage.removeItem('guestUsername')
+    setIsGuest(false)
+    router.push('/')
+  }
 
   const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
@@ -153,27 +177,56 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
 
               {/* Desktop Navigation */}
               <div className="hidden lg:flex items-center gap-8">
-                {SignedOut && (
-                  <SignedOut>
-                    <div className="flex items-center gap-4">
-                      {SignInButton && (
-                        <SignInButton forceRedirectUrl="/dashboard">
-                          <button className="px-6 py-3 text-sm font-semibold text-zinc-300 hover:text-white transition-all duration-300 relative group">
-                            <span className="relative z-10">Sign In</span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/50 to-zinc-600/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          </button>
-                        </SignInButton>
-                      )}
-                      {SignUpButton && (
-                        <SignUpButton forceRedirectUrl="/dashboard">
-                          <button className="px-8 py-3 text-sm font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-xl hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105 cursor-pointer relative overflow-hidden">
-                            <span className="relative z-10">Get Started</span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                          </button>
-                        </SignUpButton>
-                      )}
-                    </div>
-                  </SignedOut>
+                {isGuest ? (
+                  <div className="flex items-center gap-4">
+                    <Link href="/guest-mode-snippets">
+                      <button className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
+                        pathname === '/guest-mode-snippets'
+                          ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
+                          : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
+                      }`}>
+                        Snippets
+                      </button>
+                    </Link>
+                    <button
+                      onClick={handleGuestSignOut}
+                      className="px-6 py-3 text-sm font-semibold text-red-400 hover:text-red-300 transition-all duration-300 relative group cursor-pointer"
+                    >
+                      <span className="relative z-10">Sign Out as Guest</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-red-400/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {SignedOut && (
+                      <SignedOut>
+                        <div className="flex items-center gap-4">
+                          <Link href="/choose-username">
+                            <button className="px-6 py-3 text-sm font-semibold text-zinc-300 hover:text-white transition-all duration-300 relative group cursor-pointer">
+                              <span className="relative z-10">Login as Guest</span>
+                              <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/50 to-zinc-600/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            </button>
+                          </Link>
+                          {SignInButton && (
+                            <SignInButton forceRedirectUrl="/dashboard">
+                              <button className="px-6 py-3 text-sm font-semibold text-zinc-300 hover:text-white transition-all duration-300 relative group cursor-pointer">
+                                <span className="relative z-10">Sign In</span>
+                                <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/50 to-zinc-600/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                              </button>
+                            </SignInButton>
+                          )}
+                          {SignUpButton && (
+                            <SignUpButton forceRedirectUrl="/dashboard">
+                              <button className="px-8 py-3 text-sm font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-xl hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105 cursor-pointer relative overflow-hidden">
+                                <span className="relative z-10">Get Started</span>
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                              </button>
+                            </SignUpButton>
+                          )}
+                        </div>
+                      </SignedOut>
+                    )}
+                  </>
                 )}
                 {SignedIn && (
                   <SignedIn>
@@ -259,25 +312,52 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
             {/* Mobile Menu */}
             <div className={`lg:hidden overflow-hidden transition-all duration-500 ease-in-out ${isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
               <div className="py-6 space-y-4 border-t border-zinc-700/30">
-                {SignedOut && (
-                  <SignedOut>
-                    <div className="space-y-4">
-                      {SignInButton && (
-                        <SignInButton forceRedirectUrl="/dashboard">
-                          <button className="w-full px-6 py-4 text-left text-base font-semibold text-zinc-300 hover:text-white hover:bg-zinc-700/30 rounded-xl transition-all duration-300">
-                            Sign In
-                          </button>
-                        </SignInButton>
-                      )}
-                      {SignUpButton && (
-                        <SignUpButton forceRedirectUrl="/dashboard">
-                          <button className="w-full px-6 py-4 text-base font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-xl hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg shadow-indigo-500/30">
-                            Get Started
-                          </button>
-                        </SignUpButton>
-                      )}
-                    </div>
-                  </SignedOut>
+                {isGuest ? (
+                  <div className="space-y-4">
+                    <Link href="/guest-mode-snippets">
+                      <button className={`w-full px-6 py-4 text-left text-base font-semibold rounded-xl transition-all duration-300 cursor-pointer ${
+                        pathname === '/guest-mode-snippets'
+                          ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
+                          : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
+                      }`}>
+                        Snippets
+                      </button>
+                    </Link>
+                    <button
+                      onClick={handleGuestSignOut}
+                      className="w-full px-6 py-4 text-left text-base font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all duration-300 cursor-pointer"
+                    >
+                      Sign Out as Guest
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {SignedOut && (
+                      <SignedOut>
+                        <div className="space-y-4">
+                          <Link href="/choose-username">
+                            <button className="w-full px-6 py-4 text-left text-base font-semibold text-zinc-300 hover:text-white hover:bg-zinc-700/30 rounded-xl transition-all duration-300 cursor-pointer">
+                              Login as Guest
+                            </button>
+                          </Link>
+                          {SignInButton && (
+                            <SignInButton forceRedirectUrl="/dashboard">
+                              <button className="w-full px-6 py-4 text-left text-base font-semibold text-zinc-300 hover:text-white hover:bg-zinc-700/30 rounded-xl transition-all duration-300 cursor-pointer">
+                                Sign In
+                              </button>
+                            </SignInButton>
+                          )}
+                          {SignUpButton && (
+                            <SignUpButton forceRedirectUrl="/dashboard">
+                              <button className="w-full px-6 py-4 text-base font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-xl hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg shadow-indigo-500/30 cursor-pointer">
+                                Get Started
+                              </button>
+                            </SignUpButton>
+                          )}
+                        </div>
+                      </SignedOut>
+                    )}
+                  </>
                 )}
                 {SignedIn && (
                   <SignedIn>

@@ -11,6 +11,12 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
 ])
 
+const isGuestRoute = createRouteMatcher([
+  '/choose-username(.*)',
+  '/guest-mode-snippets(.*)',
+  '/credits(.*)',
+])
+
 export default clerkMiddleware(async (auth, req) => {
   // Check if Clerk keys are available
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || !process.env.CLERK_SECRET_KEY) {
@@ -20,6 +26,18 @@ export default clerkMiddleware(async (auth, req) => {
 
   try {
     const { userId } = await auth()
+    
+    // Check if user is in guest mode (client-side check)
+    const isGuestMode = req.headers.get('x-guest-mode') === 'true'
+    
+    // If in guest mode, only allow guest routes
+    if (isGuestMode) {
+      if (isGuestRoute(req)) {
+        return NextResponse.next()
+      } else {
+        return NextResponse.redirect(new URL('/guest-mode-snippets', req.url))
+      }
+    }
     
     // Protect routes that require authentication
     if (isProtectedRoute(req)) {

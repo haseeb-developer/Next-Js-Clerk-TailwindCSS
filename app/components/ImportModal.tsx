@@ -124,7 +124,8 @@ export function ImportModal({ isOpen, onClose, onImportSnippets, onShowToast }: 
           code: code.trim(),
           language,
           tags: tags.length > 0 ? tags : undefined,
-          is_public: isPublic
+          is_public: isPublic,
+          is_favorite: false
         })
       }
     }
@@ -176,7 +177,8 @@ export function ImportModal({ isOpen, onClose, onImportSnippets, onShowToast }: 
           code: code.trim(),
           language,
           tags: tags.length > 0 ? tags : undefined,
-          is_public: isPublic
+          is_public: isPublic,
+          is_favorite: false
         })
       }
     }
