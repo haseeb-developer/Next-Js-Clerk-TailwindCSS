@@ -7,6 +7,17 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOi
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Database types
+export interface Folder {
+  id: string
+  user_id: string
+  name: string
+  description?: string
+  color: string
+  icon: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Snippet {
   id: string
   title: string
@@ -17,8 +28,23 @@ export interface Snippet {
   is_public: boolean
   is_favorite: boolean
   user_id: string
+  folder_id?: string | null
   created_at: string
   updated_at: string
+}
+
+export interface CreateFolderData {
+  name: string
+  description?: string
+  color?: string
+  icon?: string
+}
+
+export interface UpdateFolderData {
+  name?: string
+  description?: string
+  color?: string
+  icon?: string
 }
 
 export interface CreateSnippetData {
@@ -29,6 +55,7 @@ export interface CreateSnippetData {
   tags?: string[]
   is_public?: boolean
   is_favorite?: boolean
+  folder_id?: string | null
 }
 
 export interface UpdateSnippetData {
@@ -39,4 +66,5 @@ export interface UpdateSnippetData {
   tags?: string[]
   is_public?: boolean
   is_favorite?: boolean
+  folder_id?: string | null
 }

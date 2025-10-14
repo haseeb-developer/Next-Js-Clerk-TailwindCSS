@@ -3,12 +3,16 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { supabase, type Snippet, type CreateSnippetData } from '../../lib/supabase'
+import { supabase, type Snippet, type CreateSnippetData, type Folder, type CreateFolderData } from '../../lib/supabase'
 import { Toast, ToastContainer } from './Toast'
 import { DeleteConfirmationModal } from './DeleteConfirmationModal'
 import { RecycleBinModal } from './RecycleBinModal'
 import { ExportModal } from './ExportModal'
 import { ImportModal } from './ImportModal'
+import { CreateFolderModal } from './CreateFolderModal'
+import { ConfirmDeleteFolderModal } from './ConfirmDeleteFolderModal'
+import { AlertModal } from './AlertModal'
+import { FolderCard } from './FolderCard'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 const PROGRAMMING_LANGUAGES = [
@@ -103,6 +107,17 @@ function SnippetsUserContent({ useUser }: any) {
           const [showExportModal, setShowExportModal] = useState(false)
           const [showImportModal, setShowImportModal] = useState(false)
           
+  // Folder states
+  const [folders, setFolders] = useState<Folder[]>([])
+  const [showCreateFolder, setShowCreateFolder] = useState(false)
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null)
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
+  const [showFoldersSection, setShowFoldersSection] = useState(true)
+  const [folderSearchTerm, setFolderSearchTerm] = useState('')
+  const [showDeleteFolder, setShowDeleteFolder] = useState(false)
+  const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null)
+  const [showAlert, setShowAlert] = useState<{ open: boolean; title: string; message: string; variant?: 'error'|'info' }>({ open: false, title: '', message: '' })
+          
   // Form validation states
   const [titleError, setTitleError] = useState('')
   
@@ -146,7 +161,8 @@ function SnippetsUserContent({ useUser }: any) {
     language: '',
     tags: [],
     is_public: false,
-    is_favorite: false
+    is_favorite: false,
+    folder_id: null
   })
 
   const fetchSnippets = useCallback(async () => {
@@ -205,11 +221,31 @@ function SnippetsUserContent({ useUser }: any) {
     }
   }, [user])
 
+  // Fetch folders
+  const fetchFolders = useCallback(async () => {
+    if (!user || !user.id) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('folders')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setFolders(data || [])
+    } catch (error) {
+      console.error('Error fetching folders:', error)
+      setFolders([])
+    }
+  }, [user])
+
   useEffect(() => {
     if (user) {
       fetchSnippets()
+      fetchFolders()
     }
-  }, [user, fetchSnippets])
+  }, [user, fetchSnippets, fetchFolders])
 
   // Load accordion state from localStorage
   useEffect(() => {
@@ -271,9 +307,15 @@ function SnippetsUserContent({ useUser }: any) {
         code: '',
         language: '',
         tags: [],
-        is_public: false
+        is_public: false,
+        is_favorite: false,
+        folder_id: selectedFolderId
       })
       setShowCreateForm(false)
+      addToast({
+        message: 'Snippet created successfully!',
+        type: 'success'
+      })
       fetchSnippets()
     } catch (error) {
       console.error('Error creating snippet:', error)
@@ -303,7 +345,13 @@ function SnippetsUserContent({ useUser }: any) {
         code: '',
         language: '',
         tags: [],
-        is_public: false
+        is_public: false,
+        is_favorite: false,
+        folder_id: selectedFolderId
+      })
+      addToast({
+        message: 'Snippet updated successfully!',
+        type: 'success'
       })
       fetchSnippets()
     } catch (error) {
@@ -535,24 +583,135 @@ function SnippetsUserContent({ useUser }: any) {
       language: snippet.language,
       tags: snippet.tags || [],
       is_public: snippet.is_public,
-      is_favorite: snippet.is_favorite
+      is_favorite: snippet.is_favorite,
+      folder_id: snippet.folder_id || null
     })
     setShowCreateForm(true)
   }
 
-          // Get recent snippets (3 most recent)
+  // Folder CRUD functions
+  const handleCreateFolder = async (data: CreateFolderData) => {
+    if (!user || !user.id) return
+    
+    try {
+      // Check duplicate by name for this user (case-insensitive)
+      const { data: existing } = await supabase
+        .from('folders')
+        .select('id')
+        .eq('user_id', user.id)
+        .ilike('name', data.name.trim())
+        .limit(1)
+
+      if (existing && existing.length > 0) {
+        setShowAlert({ open: true, title: 'Duplicate Folder Name', message: 'A folder with this name already exists. Please choose a different name.', variant: 'error' })
+        return
+      }
+
+      const { error } = await supabase
+        .from('folders')
+        .insert([{
+          ...data,
+          user_id: user.id
+        }])
+
+      if (error) throw error
+
+      addToast({
+        message: 'Folder created successfully!',
+        type: 'success'
+      })
+      fetchFolders()
+    } catch (error) {
+      console.error('Error creating folder:', error)
+      addToast({
+        message: 'Failed to create folder',
+        type: 'error'
+      })
+    }
+  }
+
+  const handleUpdateFolder = async (data: CreateFolderData) => {
+    if (!editingFolder) return
+    
+    try {
+      const { error } = await supabase
+        .from('folders')
+        .update(data)
+        .eq('id', editingFolder.id)
+
+      if (error) throw error
+
+      addToast({
+        message: 'Folder updated successfully!',
+        type: 'success'
+      })
+      setEditingFolder(null)
+      fetchFolders()
+    } catch (error) {
+      console.error('Error updating folder:', error)
+      addToast({
+        message: 'Failed to update folder',
+        type: 'error'
+      })
+    }
+  }
+
+  const handleDeleteFolder = async (folder: Folder) => {
+    setFolderToDelete(folder)
+    setShowDeleteFolder(true)
+  }
+
+  const confirmDeleteFolder = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('folders')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      if (selectedFolderId === id) {
+        setSelectedFolderId(null)
+      }
+
+      addToast({
+        message: 'Folder deleted successfully',
+        type: 'success'
+      })
+      setShowDeleteFolder(false)
+      setFolderToDelete(null)
+      fetchFolders()
+      fetchSnippets() // Refresh snippets to reflect folder changes
+    } catch (error) {
+      console.error('Error deleting folder:', error)
+      addToast({
+        message: 'Failed to delete folder',
+        type: 'error'
+      })
+    }
+  }
+
+          // Get recent snippets (3 most recent), respecting folder context
           const recentSnippets = [...snippets]
+            .filter(s => selectedFolderId ? s.folder_id === selectedFolderId : s.folder_id == null)
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
             .slice(0, 3)
 
+          // Filter folders by search term
+          const filteredFolders = folders.filter(folder => 
+            folder.name.toLowerCase().includes(folderSearchTerm.toLowerCase()) ||
+            folder.description?.toLowerCase().includes(folderSearchTerm.toLowerCase())
+          )
+
           // Filter and sort all snippets
-          const filteredSnippets = snippets.filter(snippet => {
+         const filteredSnippets = snippets.filter(snippet => {
             const matchesSearch = snippet.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                  snippet.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                  snippet.code.toLowerCase().includes(searchTerm.toLowerCase())
             const matchesLanguage = !selectedLanguage || snippet.language === selectedLanguage
             const matchesFavorites = !showFavoritesOnly || snippet.is_favorite
-            return matchesSearch && matchesLanguage && matchesFavorites
+          const matchesFolder = selectedFolderId ? (snippet.folder_id === selectedFolderId) : (snippet.folder_id == null)
+            return matchesSearch && matchesLanguage && matchesFavorites && matchesFolder
           }).sort((a, b) => {
             switch (sortBy) {
               case 'newest':
@@ -664,148 +823,246 @@ function SnippetsUserContent({ useUser }: any) {
                     Recycle Bin
                   </button>
                 )}
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="px-6 py-2 text-sm font-bold bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-105 cursor-pointer flex items-center gap-1.5"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 5v14m7-7H5"/>
-                  </svg>
-                  New Snippet
-                </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Search and Filter */}
-        <motion.div 
-          className="mb-8 mx-5"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, delay: 0 }}
-        >
-          <div className="bg-[#111B32] border border-gray-700 rounded-3xl p-6 shadow-xl">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.15, delay: 0 }}
-                >
-                  <div className="relative">
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      placeholder="Search snippets... (Ctrl+K)"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-4 py-3 pl-12 pr-12 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 shadow-sm transition-all duration-200"
-                    />
-                    <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+
+        {/* Folders Section */}
+        <div className="mb-8 mx-5">
+            <div className="bg-[#111B32] border border-gray-700 rounded-3xl overflow-hidden shadow-xl">
+              {/* Accordion Header (div to avoid nested button inside button hydration issues) */}
+              <div
+                role="button"
+                onClick={() => setShowFoldersSection(!showFoldersSection)}
+                className="w-full p-6 text-left border-b border-gray-600/30 flex items-center justify-between hover:bg-white/5 transition-colors duration-200 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                     </svg>
-                    {searchTerm && (
-                      <button
-                        onClick={() => setSearchTerm('')}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 hover:text-white transition-colors duration-200"
-                        title="Clear search"
-                      >
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    )}
                   </div>
-                </motion.div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">My Folders</h2>
+                    <p className="text-gray-400">Organize your snippets into folders</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  {selectedFolderId && (
+                    <div
+                      role="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedFolderId(null)
+                      }}
+                      className="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors text-sm font-medium cursor-pointer"
+                    >
+                      Clear Selected
+                    </div>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowCreateFolder(true)
+                      setEditingFolder(null)
+                    }}
+                    className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl hover:from-cyan-600 hover:to-blue-600 transition-all duration-300 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                    New Folder
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowFoldersSection(!showFoldersSection) }}
+                    className="p-2 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 hover:border-gray-500/70 rounded-lg transition-all duration-300 cursor-pointer"
+                    aria-label="Toggle folders"
+                  >
+                    <svg className={`w-5 h-5 text-gray-400 hover:text-white transition-all duration-200 ${showFoldersSection ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M19 9l-7 7-7-7"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-3">
-                {/* Language Filter */}
-                <div className="relative">
-                  <select
-                    value={selectedLanguage}
-                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="w-48 px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
-                  >
-                    <option value="">All Languages</option>
-                    {PROGRAMMING_LANGUAGES.map(lang => (
-                      <option key={lang} value={lang}>{lang}</option>
-                    ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 9l-7 7-7-7"/>
-                    </svg>
+
+              {/* Accordion Content */}
+              <div className={`transition-all duration-300 overflow-hidden ${showFoldersSection ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="p-6">
+                  {/* Folder Search Bar */}
+                  <div className="mb-6">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search folders..."
+                        value={folderSearchTerm}
+                        onChange={(e) => setFolderSearchTerm(e.target.value)}
+                        className="w-full px-4 py-3 pl-12 pr-4 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400/50 shadow-sm transition-all duration-200"
+                      />
+                      <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      {folderSearchTerm && (
+                        <button
+                          onClick={() => setFolderSearchTerm('')}
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 hover:text-white transition-colors duration-200"
+                        >
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-                
-                {/* Favorites Filter */}
-                <div className="relative">
-                  <select
-                    value={showFavoritesOnly ? 'favorites' : 'all'}
-                    onChange={(e) => setShowFavoritesOnly(e.target.value === 'favorites')}
-                    className="w-40 px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
-                  >
-                    <option value="all">All Snippets</option>
-                    <option value="favorites">⭐ Favorites</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 9l-7 7-7-7"/>
-                    </svg>
+
+                  {/* All Snippets Card */}
+                  <div className="mb-6">
+                    <div
+                      onClick={() => setSelectedFolderId(null)}
+                      className="group relative rounded-2xl p-4 border-2 transition-all duration-300 cursor-pointer overflow-hidden shadow-lg hover:shadow-xl"
+                      style={{
+                        backgroundColor: '#3B82F608',
+                        borderColor: selectedFolderId === null ? '#3B82F6' : '#374151'
+                      }}
+                    >
+                      {/* Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                      
+                      {/* Content */}
+                      <div className="relative z-10 flex flex-col h-full">
+                        {/* Header: Icon and Title */}
+                        <div className="flex items-center gap-4 mb-4">
+                          <div 
+                            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0"
+                            style={{ backgroundColor: '#3B82F6' }}
+                          >
+                            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-base font-semibold leading-5 line-clamp-2 break-words text-white">
+                              All Snippets
+                            </h3>
+                          </div>
+                        </div>
+
+                        {/* Selected indicator */}
+                        {selectedFolderId === null && (
+                          <div className="absolute top-[-5px] right-[0px] flex items-center gap-1.5 text-xs font-medium" style={{ color: '#3B82F6' }}>
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                            </svg>
+                            <span>Selected</span>
+                          </div>
+                        )}
+
+                        {/* Description */}
+                        <div className="mb-4 flex-1">
+                          <p className="text-gray-400 text-sm leading-relaxed line-clamp-2 break-words">
+                            View all your snippets across all folders
+                          </p>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-between pt-4 border-t border-white/10 mt-auto">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md"
+                              style={{ backgroundColor: '#3B82F6' }}
+                            >
+                              <span className="text-white text-sm font-semibold">
+                                {snippets.length}
+                              </span>
+                            </div>
+                            <span className="text-gray-300 text-sm">snippets</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                
-                {/* Sort Filter */}
-                <div className="relative">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="w-40 px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
-                  >
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                    <option value="name-az">Name A-Z</option>
-                    <option value="name-za">Name Z-A</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 9l-7 7-7-7"/>
-                    </svg>
-                  </div>
+
+                  {/* Folders Grid */}
+                  {filteredFolders.length > 0 ? (
+                    <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                      {filteredFolders.map((folder) => {
+                        const snippetCount = snippets.filter(s => s.folder_id === folder.id).length
+                        return (
+                          <FolderCard
+                            key={folder.id}
+                            folder={folder}
+                            snippetCount={snippetCount}
+                            onSelect={setSelectedFolderId}
+                            onEdit={(folder) => {
+                              setEditingFolder(folder)
+                              setShowCreateFolder(true)
+                            }}
+                            onDelete={handleDeleteFolder}
+                            isSelected={selectedFolderId === folder.id}
+                          />
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-200 to-gray-300 rounded-2xl flex items-center justify-center">
+                        <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-300 mb-2">No folders found</h3>
+                      <p className="text-gray-500 mb-6">
+                        {folderSearchTerm ? 'Try adjusting your search terms.' : 'Start by creating your first folder!'}
+                      </p>
+                      {!folderSearchTerm && (
+                        <button
+                          onClick={() => {
+                            setShowCreateFolder(true)
+                            setEditingFolder(null)
+                          }}
+                          className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl hover:from-cyan-600 hover:to-blue-600 transition-all duration-300 cursor-pointer"
+                        >
+                          Create Your First Folder
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
-        </motion.div>
 
         {/* Recent Snippets Section */}
         {recentSnippets.length > 0 && (
           <div className="mb-8 mx-5">
           <div className="bg-[#111B32] border border-gray-700 rounded-3xl overflow-hidden shadow-xl">
               {/* Header */}
-              <div className="p-6 border-b border-gray-600/30">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500/20 rounded-lg">
-                      <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-white">Recent Snippets</h2>
-                      <p className="text-gray-400">Continue working on your latest code</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowRecentSnippets(!showRecentSnippets)}
-                    className="p-2 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 hover:border-gray-500/70 rounded-lg transition-all duration-300 cursor-pointer"
-                  >
-                    <svg className={`w-5 h-5 text-gray-400 hover:text-white transition-all duration-200 ${showRecentSnippets ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 9l-7 7-7-7"/>
+              <div
+                role="button"
+                onClick={() => setShowRecentSnippets(!showRecentSnippets)}
+                className="p-6 border-b border-gray-600/30 flex items-center justify-between hover:bg-white/5 transition-colors duration-200 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/20 rounded-lg">
+                    <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                  </button>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">Recent Snippets</h2>
+                    <p className="text-gray-400">Continue working on your latest code</p>
+                  </div>
                 </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowRecentSnippets(!showRecentSnippets) }}
+                  className="p-2 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 hover:border-gray-500/70 rounded-lg transition-all duration-300 cursor-pointer"
+                  aria-label="Toggle recent snippets"
+                >
+                  <svg className={`w-5 h-5 text-gray-400 hover:text-white transition-all duration-200 ${showRecentSnippets ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
               </div>
 
               {/* Content */}
@@ -915,22 +1172,43 @@ function SnippetsUserContent({ useUser }: any) {
         <div className="mb-8 mx-5">
           <div className="bg-[#111B32] border border-gray-700 rounded-3xl overflow-hidden shadow-xl">
             {/* Header */}
-            <div className="p-6 border-b border-gray-600/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-500/20 rounded-lg">
-                    <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-white">All Snippets</h2>
-                    <p className="text-gray-400">Browse and manage all your code snippets</p>
-                  </div>
+            <div
+              role="button"
+              onClick={() => setShowAllSnippets(!showAllSnippets)}
+              className="p-6 border-b border-gray-600/30 flex items-center justify-between hover:bg-white/5 transition-colors duration-200 cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-500/20 rounded-lg">
+                  <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                  </svg>
                 </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">All Snippets</h2>
+                  <p className="text-gray-400">Browse and manage all your code snippets</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
                 <button
-                  onClick={() => setShowAllSnippets(!showAllSnippets)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowCreateForm(true)
+                    setFormData({
+                      ...formData,
+                      folder_id: selectedFolderId
+                    })
+                  }}
+                  className="px-6 py-2 text-sm font-bold bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-105 cursor-pointer flex items-center gap-1.5"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 5v14m7-7H5"/>
+                  </svg>
+                  New Snippet
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowAllSnippets(!showAllSnippets) }}
                   className="p-2 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 hover:border-gray-500/70 rounded-lg transition-all duration-300 cursor-pointer"
+                  aria-label="Toggle all snippets"
                 >
                   <svg className={`w-5 h-5 text-gray-400 hover:text-white transition-all duration-200 ${showAllSnippets ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path d="M19 9l-7 7-7-7"/>
@@ -941,7 +1219,109 @@ function SnippetsUserContent({ useUser }: any) {
 
             {/* Accordion Content */}
             <div className={`transition-all duration-300 overflow-hidden ${showAllSnippets ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="p-6 ">
+              <div className="p-6">
+                {/* Search and Filter */}
+                <motion.div 
+                  className="mb-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: 0 }}
+                >
+                  <div className="bg-gray-800/50 border border-gray-600/60 rounded-2xl p-4 shadow-sm">
+                    <div className="flex flex-col lg:flex-row gap-4">
+                      <div className="flex-1">
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.15, delay: 0 }}
+                        >
+                          <div className="relative">
+                            <input
+                              ref={searchInputRef}
+                              type="text"
+                              placeholder="Search snippets... (Ctrl+K)"
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="w-full px-4 py-3 pl-12 pr-12 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 shadow-sm transition-all duration-200"
+                            />
+                            <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            {searchTerm && (
+                              <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 hover:text-white transition-colors duration-200"
+                                title="Clear search"
+                              >
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        </motion.div>
+                      </div>
+                      <div className="flex gap-3">
+                        {/* Language Filter */}
+                        <div className="relative">
+                          <select
+                            value={selectedLanguage}
+                            onChange={(e) => setSelectedLanguage(e.target.value)}
+                            className="w-48 px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
+                          >
+                            <option value="">All Languages</option>
+                            {PROGRAMMING_LANGUAGES.map(lang => (
+                              <option key={lang} value={lang}>{lang}</option>
+                            ))}
+                          </select>
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path d="M19 9l-7 7-7-7"/>
+                            </svg>
+                          </div>
+                        </div>
+                        
+                        {/* Favorites Filter */}
+                        <div className="relative">
+                          <select
+                            value={showFavoritesOnly ? 'favorites' : 'all'}
+                            onChange={(e) => setShowFavoritesOnly(e.target.value === 'favorites')}
+                            className="w-40 px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
+                          >
+                            <option value="all">All Snippets</option>
+                            <option value="favorites">⭐ Favorites</option>
+                          </select>
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path d="M19 9l-7 7-7-7"/>
+                            </svg>
+                          </div>
+                        </div>
+                        
+                        {/* Sort Filter */}
+                        <div className="relative">
+                          <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="w-40 px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
+                          >
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                            <option value="name-az">Name A-Z</option>
+                            <option value="name-za">Name Z-A</option>
+                          </select>
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path d="M19 9l-7 7-7-7"/>
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+
                 {filteredSnippets.length > 0 ? (
                   <div className={`grid gap-6 ${
                     filteredSnippets.length === 1 ? 'grid-cols-1' :
@@ -1333,7 +1713,9 @@ function SnippetsUserContent({ useUser }: any) {
                     code: '',
                     language: '',
                     tags: [],
-                    is_public: false
+                    is_public: false,
+                    is_favorite: false,
+                    folder_id: selectedFolderId
                   })
                 }}
                 className="p-3 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-300 cursor-pointer"
@@ -1434,6 +1816,30 @@ function SnippetsUserContent({ useUser }: any) {
                 />
               </div>
 
+              {/* Folder Selection */}
+              {folders.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Folder (Optional)</label>
+                  <div className="relative">
+                    <select
+                      value={formData.folder_id || ''}
+                      onChange={(e) => setFormData({ ...formData, folder_id: e.target.value || null })}
+                      className="w-full px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm transition-all duration-200"
+                    >
+                      <option value="">No Folder (Root)</option>
+                      {folders.map(folder => (
+                        <option key={folder.id} value={folder.id}>📁 {folder.name}</option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -1481,7 +1887,9 @@ function SnippetsUserContent({ useUser }: any) {
                       code: '',
                       language: '',
                       tags: [],
-                      is_public: false
+                      is_public: false,
+                      is_favorite: false,
+                      folder_id: selectedFolderId
                     })
                   }}
                   className="px-8 py-3 bg-gray-700 text-gray-200 rounded-xl hover:bg-gray-600 transition-all duration-300 font-semibold cursor-pointer"
@@ -1528,6 +1936,34 @@ function SnippetsUserContent({ useUser }: any) {
         onClose={() => setShowImportModal(false)}
         onImportSnippets={handleImportSnippets}
         onShowToast={(message, type) => addToast({ message, type })}
+      />
+
+      {/* Create/Edit Folder Modal */}
+      <CreateFolderModal
+        isOpen={showCreateFolder}
+        onClose={() => {
+          setShowCreateFolder(false)
+          setEditingFolder(null)
+        }}
+        onSubmit={editingFolder ? handleUpdateFolder : handleCreateFolder}
+        editingFolder={editingFolder}
+      />
+
+      {/* Confirm Delete Folder */}
+      <ConfirmDeleteFolderModal
+        isOpen={showDeleteFolder}
+        folder={folderToDelete}
+        onClose={() => { setShowDeleteFolder(false); setFolderToDelete(null) }}
+        onConfirm={confirmDeleteFolder}
+      />
+
+      {/* Alert (e.g., duplicate name) */}
+      <AlertModal
+        isOpen={showAlert.open}
+        title={showAlert.title}
+        message={showAlert.message}
+        variant={showAlert.variant}
+        onClose={() => setShowAlert({ open: false, title: '', message: '' })}
       />
 
       {/* Recycle Bin Modal */}
