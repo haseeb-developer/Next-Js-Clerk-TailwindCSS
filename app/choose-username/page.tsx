@@ -209,7 +209,7 @@ export default function ChooseUsername() {
             <div className="mb-6">
               <button
                 onClick={() => setShowPreviousUsernames(!showPreviousUsernames)}
-                className="w-full px-4 py-3 text-sm font-medium text-zinc-300 hover:text-white hover:bg-zinc-700/30 rounded-xl border border-zinc-600 transition-all duration-300 flex items-center justify-center gap-2"
+                className="w-full px-4 py-3 text-sm font-medium text-zinc-300 hover:text-white hover:bg-zinc-700/30 rounded-xl border border-zinc-600 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Sign in with previous username</span>
                 <svg 
@@ -234,7 +234,7 @@ export default function ChooseUsername() {
                       <button
                         key={index}
                         onClick={() => handleSignInWithPrevious(prevUsername)}
-                        className="w-full px-4 py-3 text-sm font-medium text-zinc-300 hover:text-white hover:bg-indigo-500/20 border border-indigo-500/30 rounded-xl transition-all duration-300 text-left group"
+                        className="w-full px-4 py-3 text-sm font-medium text-zinc-300 hover:text-white hover:bg-indigo-500/20 border border-indigo-500/30 rounded-xl transition-all duration-300 text-left group cursor-pointer"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">

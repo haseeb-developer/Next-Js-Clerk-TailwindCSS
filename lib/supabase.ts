@@ -18,6 +18,20 @@ export interface Folder {
   updated_at: string
 }
 
+export interface Category {
+  id: string
+  user_id: string
+  name: string
+  description?: string
+  color: string
+  background: string
+  icon: string
+  is_default: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
 export interface Snippet {
   id: string
   title: string
@@ -29,6 +43,7 @@ export interface Snippet {
   is_favorite: boolean
   user_id: string
   folder_id?: string | null
+  category_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -47,6 +62,25 @@ export interface UpdateFolderData {
   icon?: string
 }
 
+export interface CreateCategoryData {
+  name: string
+  description?: string
+  color?: string
+  background?: string
+  icon?: string
+  is_default?: boolean
+  sort_order?: number
+}
+
+export interface UpdateCategoryData {
+  name?: string
+  description?: string
+  color?: string
+  background?: string
+  icon?: string
+  sort_order?: number
+}
+
 export interface CreateSnippetData {
   title: string
   description?: string
@@ -56,6 +90,7 @@ export interface CreateSnippetData {
   is_public?: boolean
   is_favorite?: boolean
   folder_id?: string | null
+  category_id?: string | null
 }
 
 export interface UpdateSnippetData {
@@ -67,4 +102,5 @@ export interface UpdateSnippetData {
   is_public?: boolean
   is_favorite?: boolean
   folder_id?: string | null
+  category_id?: string | null
 }

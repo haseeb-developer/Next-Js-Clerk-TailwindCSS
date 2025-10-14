@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { supabase, type Snippet, type CreateSnippetData, type Folder, type CreateFolderData } from '../../lib/supabase'
+import { supabase, type Snippet, type CreateSnippetData, type Folder, type CreateFolderData, type Category, type CreateCategoryData } from '../../lib/supabase'
 import { Toast, ToastContainer } from './Toast'
 import { DeleteConfirmationModal } from './DeleteConfirmationModal'
 import { RecycleBinModal } from './RecycleBinModal'
@@ -13,6 +13,8 @@ import { CreateFolderModal } from './CreateFolderModal'
 import { ConfirmDeleteFolderModal } from './ConfirmDeleteFolderModal'
 import { AlertModal } from './AlertModal'
 import { FolderCard } from './FolderCard'
+import CategoryCard from './CategoryCard'
+import CreateCategoryModal from './CreateCategoryModal'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 const PROGRAMMING_LANGUAGES = [
@@ -117,6 +119,15 @@ function SnippetsUserContent({ useUser }: any) {
   const [showDeleteFolder, setShowDeleteFolder] = useState(false)
   const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null)
   const [showAlert, setShowAlert] = useState<{ open: boolean; title: string; message: string; variant?: 'error'|'info' }>({ open: false, title: '', message: '' })
+  
+  // Category states
+  const [categories, setCategories] = useState<Category[]>([])
+  const [showCreateCategory, setShowCreateCategory] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+  const [showCategoriesSection, setShowCategoriesSection] = useState(true)
+  const [categorySearchTerm, setCategorySearchTerm] = useState('')
+  const [categorySnippetCounts, setCategorySnippetCounts] = useState<{ [key: string]: number }>({})
           
   // Form validation states
   const [titleError, setTitleError] = useState('')
@@ -162,7 +173,8 @@ function SnippetsUserContent({ useUser }: any) {
     tags: [],
     is_public: false,
     is_favorite: false,
-    folder_id: null
+    folder_id: null,
+    category_id: null
   })
 
   const fetchSnippets = useCallback(async () => {
@@ -240,12 +252,49 @@ function SnippetsUserContent({ useUser }: any) {
     }
   }, [user])
 
+  const fetchCategories = useCallback(async () => {
+    if (!user || !user.id) return
+    
+    try {
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('sort_order', { ascending: true })
+
+      if (categoriesError) throw categoriesError
+      setCategories(categoriesData || [])
+
+      // Fetch snippet counts for each category
+      const { data: snippetCounts, error: countError } = await supabase
+        .from('snippets')
+        .select('category_id')
+        .eq('user_id', user.id)
+
+      if (countError) throw countError
+
+      const counts: { [key: string]: number } = {}
+      snippetCounts?.forEach(snippet => {
+        const categoryId = snippet.category_id || 'uncategorized'
+        counts[categoryId] = (counts[categoryId] || 0) + 1
+      })
+
+      setCategorySnippetCounts(counts)
+      
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      setCategories([])
+      setCategorySnippetCounts({})
+    }
+  }, [user])
+
   useEffect(() => {
     if (user) {
       fetchSnippets()
       fetchFolders()
+      fetchCategories()
     }
-  }, [user, fetchSnippets, fetchFolders])
+  }, [user, fetchSnippets, fetchFolders, fetchCategories])
 
   // Load accordion state from localStorage
   useEffect(() => {
@@ -691,9 +740,213 @@ function SnippetsUserContent({ useUser }: any) {
     }
   }
 
-          // Get recent snippets (3 most recent), respecting folder context
+  // Category CRUD functions
+  const handleCreateCategory = async (data: CreateCategoryData) => {
+    if (!user?.id) return
+
+    try {
+      // Check for duplicate names
+      const { data: existingCategories } = await supabase
+        .from('categories')
+        .select('name')
+        .eq('user_id', user.id)
+        .ilike('name', data.name!)
+
+      if (existingCategories && existingCategories.length > 0) {
+        setShowAlert({ 
+          open: true, 
+          title: 'Duplicate Category', 
+          message: `A category named "${data.name}" already exists. Please choose a different name.`,
+          variant: 'error'
+        })
+        return
+      }
+
+      // Get the next sort order
+      const { data: lastCategory } = await supabase
+        .from('categories')
+        .select('sort_order')
+        .eq('user_id', user.id)
+        .order('sort_order', { ascending: false })
+        .limit(1)
+
+      const nextSortOrder = lastCategory?.[0]?.sort_order ? lastCategory[0].sort_order + 1 : 0
+
+      const { error } = await supabase
+        .from('categories')
+        .insert([{
+          ...data,
+          user_id: user.id,
+          sort_order: nextSortOrder
+        }])
+
+      if (error) throw error
+
+      addToast({
+        message: 'Category created successfully',
+        type: 'success'
+      })
+      setShowCreateCategory(false)
+      fetchCategories()
+      
+    } catch (error) {
+      console.error('Error creating category:', error)
+      addToast({
+        message: 'Failed to create category',
+        type: 'error'
+      })
+    }
+  }
+
+  const handleUpdateCategory = async (data: CreateCategoryData) => {
+    if (!editingCategory || !user?.id) return
+
+    try {
+      // Check for duplicate names (excluding current category)
+      const { data: existingCategories } = await supabase
+        .from('categories')
+        .select('name')
+        .eq('user_id', user.id)
+        .neq('id', editingCategory.id)
+        .ilike('name', data.name!)
+
+      if (existingCategories && existingCategories.length > 0) {
+        setShowAlert({ 
+          open: true, 
+          title: 'Duplicate Category', 
+          message: `A category named "${data.name}" already exists. Please choose a different name.`,
+          variant: 'error'
+        })
+        return
+      }
+
+      const { error } = await supabase
+        .from('categories')
+        .update(data)
+        .eq('id', editingCategory.id)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      addToast({
+        message: 'Category updated successfully',
+        type: 'success'
+      })
+      setEditingCategory(null)
+      fetchCategories()
+      
+    } catch (error) {
+      console.error('Error updating category:', error)
+      addToast({
+        message: 'Failed to update category',
+        type: 'error'
+      })
+    }
+  }
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    try {
+      // First, move all snippets in this category to uncategorized
+      await supabase
+        .from('snippets')
+        .update({ category_id: null })
+        .eq('category_id', categoryId)
+        .eq('user_id', user.id)
+
+      // Then delete the category
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      if (selectedCategoryId === categoryId) {
+        setSelectedCategoryId(null)
+      }
+
+      addToast({
+        message: 'Category deleted successfully',
+        type: 'success'
+      })
+      fetchCategories()
+      fetchSnippets() // Refresh snippets to reflect category changes
+      
+    } catch (error) {
+      console.error('Error deleting category:', error)
+      addToast({
+        message: 'Failed to delete category',
+        type: 'error'
+      })
+    }
+  }
+
+
+  const getCategoryInfo = (categoryId: string | null) => {
+    if (!categoryId) return null
+    const category = categories.find(cat => cat.id === categoryId)
+    return category ? { name: category.name, color: category.color, icon: category.icon } : null
+  }
+
+  const renderCategoryIcon = (iconName: string) => {
+    const iconMap: { [key: string]: React.JSX.Element } = {
+      'web': (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"/>
+        </svg>
+      ),
+      'mobile': (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+        </svg>
+      ),
+      'backend': (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/>
+        </svg>
+      ),
+      'database': (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+        </svg>
+      ),
+      'ai': (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+        </svg>
+      ),
+      'design': (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"/>
+        </svg>
+      ),
+      'devops': (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+        </svg>
+      ),
+      'game': (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      ),
+      'other': (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+        </svg>
+      )
+    }
+    return iconMap[iconName] || iconMap['other']
+  }
+
+  // Get recent snippets (3 most recent), respecting folder and category context
           const recentSnippets = [...snippets]
-            .filter(s => selectedFolderId ? s.folder_id === selectedFolderId : s.folder_id == null)
+            .filter(s => {
+              const folderMatch = selectedFolderId ? s.folder_id === selectedFolderId : s.folder_id == null
+              const categoryMatch = selectedCategoryId ? s.category_id === selectedCategoryId : true
+              return folderMatch && categoryMatch
+            })
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
             .slice(0, 3)
 
@@ -703,6 +956,12 @@ function SnippetsUserContent({ useUser }: any) {
             folder.description?.toLowerCase().includes(folderSearchTerm.toLowerCase())
           )
 
+          // Filter categories by search term
+          const filteredCategories = categories.filter(category => 
+            category.name.toLowerCase().includes(categorySearchTerm.toLowerCase()) ||
+            category.description?.toLowerCase().includes(categorySearchTerm.toLowerCase())
+          )
+
           // Filter and sort all snippets
          const filteredSnippets = snippets.filter(snippet => {
             const matchesSearch = snippet.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -710,8 +969,9 @@ function SnippetsUserContent({ useUser }: any) {
                                  snippet.code.toLowerCase().includes(searchTerm.toLowerCase())
             const matchesLanguage = !selectedLanguage || snippet.language === selectedLanguage
             const matchesFavorites = !showFavoritesOnly || snippet.is_favorite
-          const matchesFolder = selectedFolderId ? (snippet.folder_id === selectedFolderId) : (snippet.folder_id == null)
-            return matchesSearch && matchesLanguage && matchesFavorites && matchesFolder
+            const matchesFolder = selectedFolderId ? (snippet.folder_id === selectedFolderId) : (snippet.folder_id == null)
+            const matchesCategory = selectedCategoryId ? (snippet.category_id === selectedCategoryId) : true
+            return matchesSearch && matchesLanguage && matchesFavorites && matchesFolder && matchesCategory
           }).sort((a, b) => {
             switch (sortBy) {
               case 'newest':
@@ -1033,6 +1293,160 @@ function SnippetsUserContent({ useUser }: any) {
             </div>
           </div>
 
+        {/* Categories Section */}
+        <div className="mb-8 mx-5">
+          <div className="bg-[#111B32] border border-gray-700 rounded-3xl overflow-hidden shadow-xl">
+            {/* Categories Accordion Header */}
+            <div
+              role="button"
+              onClick={() => setShowCategoriesSection(!showCategoriesSection)}
+              className="w-full p-6 text-left border-b border-gray-600/30 flex items-center justify-between hover:bg-white/5 transition-colors duration-200 cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">My Categories</h3>
+                  <p className="text-gray-400 text-sm">Organize snippets by category</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {selectedCategoryId && (
+                  <div
+                    role="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedCategoryId(null)
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Clear Filter
+                  </div>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowCreateCategory(true)
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 rounded-lg transition-all duration-200 shadow-lg cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14m7-7H5"/>
+                    </svg>
+                    New Category
+                  </div>
+                </button>
+                <button
+                  className={`p-2 rounded-lg transition-all duration-200 ${
+                    showCategoriesSection ? 'bg-gray-700 rotate-180' : 'bg-gray-700/50'
+                  }`}
+                >
+                  <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {showCategoriesSection && (
+              <div className="p-6">
+                {/* All Categories Card */}
+                <div 
+                  className={`cursor-pointer transition-all duration-300 rounded-2xl border-2 p-6 mb-6 ${
+                    selectedCategoryId === null 
+                      ? 'border-purple-500 bg-purple-500/10' 
+                      : 'border-gray-600 bg-gray-800/30 hover:border-gray-500'
+                  }`}
+                  onClick={() => setSelectedCategoryId(null)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      selectedCategoryId === null ? 'bg-purple-500/20' : 'bg-gray-700/50'
+                    }`}>
+                      <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-white">All Categories</h3>
+                      <p className="text-sm text-gray-400">View snippets from all categories</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-white">
+                        {Object.values(categorySnippetCounts).reduce((sum, count) => sum + count, 0)}
+                      </div>
+                      <div className="text-xs text-gray-400">total snippets</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Search Categories */}
+                {categories.length > 0 && (
+                  <div className="relative mb-6">
+                    <input
+                      type="text"
+                      placeholder="Search categories..."
+                      value={categorySearchTerm}
+                      onChange={(e) => setCategorySearchTerm(e.target.value)}
+                      className="w-full px-4 py-3 pl-12 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent"
+                    />
+                    <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                  </div>
+                )}
+
+                {/* Categories Grid */}
+                {filteredCategories.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredCategories.map((category) => (
+                      <CategoryCard
+                        key={category.id}
+                        category={category}
+                        snippetCount={categorySnippetCounts[category.id] || 0}
+                        isSelected={selectedCategoryId === category.id}
+                        onClick={() => setSelectedCategoryId(category.id)}
+                        onEdit={() => setEditingCategory(category)}
+                        onDelete={() => handleDeleteCategory(category.id)}
+                      />
+                    ))}
+                  </div>
+                ) : categorySearchTerm ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-700/50 rounded-2xl flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-300 mb-2">No categories found</h3>
+                    <p className="text-gray-500">No categories match your search term.</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl flex items-center justify-center">
+                      <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-300 mb-2">No categories yet</h3>
+                    <p className="text-gray-500 mb-6">Create your first category to organize your snippets.</p>
+                    <button
+                      onClick={() => setShowCreateCategory(true)}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-medium rounded-xl hover:from-purple-600 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl cursor-pointer"
+                    >
+                      Create Category
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Recent Snippets Section */}
         {recentSnippets.length > 0 && (
           <div className="mb-8 mx-5">
@@ -1323,11 +1737,7 @@ function SnippetsUserContent({ useUser }: any) {
 
 
                 {filteredSnippets.length > 0 ? (
-                  <div className={`grid gap-6 ${
-                    filteredSnippets.length === 1 ? 'grid-cols-1' :
-                    filteredSnippets.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-                  }`}>
+                  <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {filteredSnippets.map((snippet) => {
             const createdDate = new Date(snippet.created_at)
             const updatedDate = new Date(snippet.updated_at)
@@ -1337,31 +1747,106 @@ function SnippetsUserContent({ useUser }: any) {
             return (
               <motion.div
                 key={snippet.id}
-                className="bg-gray-800 rounded-2xl border border-gray-600 shadow-xl hover:shadow-2xl hover:border-gray-500 transition-all duration-150 group overflow-hidden h-full flex flex-col hover:bg-gray-700"
+                className="bg-gray-800 rounded-2xl border border-gray-600 shadow-xl hover:shadow-2xl hover:border-gray-500 transition-all duration-150 group overflow-hidden h-full flex flex-col hover:bg-gray-700 w-full max-w-sm mx-auto"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.15 }}
                 whileHover={{ scale: 1.01 }}
               >
-                {/* 1. Title Section */}
-                <div className="p-4 border-b border-gray-600/30">
-                  <h3 className="text-lg font-bold text-white group-hover:text-blue-300 transition-colors duration-150 truncate" title={snippet.title}>
+                {/* 1. Title + Description Section (No border between them) */}
+                <div className="p-4">
+                  <h3 className="text-lg font-bold text-white group-hover:text-blue-300 transition-colors duration-150 mb-2" title={snippet.title}>
                     {snippet.title.length > 25 ? snippet.title.substring(0, 25) + '...' : snippet.title}
                   </h3>
-                </div>
-
-                {/* 2. Description Section */}
-                {snippet.description && (
-                  <div className="border-b border-gray-600/30" style={{padding: '3px 14px'}}>
+                  {snippet.description && (
                     <p className="text-gray-300 text-sm leading-relaxed group-hover:text-gray-200 transition-colors duration-150" title={snippet.description}>
                       {snippet.description.length > 60 ? snippet.description.substring(0, 60) + '...' : snippet.description}
                     </p>
+                  )}
+                </div>
+
+                {/* 2. Code Section */}
+                <div className="border-t border-gray-600/30 p-4">
+                  <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700 h-32">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">{snippet.language}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">CODE</span>
+                        <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded-full">{snippet.code.split('\n').length} lines</span>
+                      </div>
+                    </div>
+                    <pre className="text-gray-300 text-sm overflow-hidden whitespace-pre-wrap break-words h-20">
+                      <code>{snippet.code.length > 100 ? snippet.code.substring(0, 100) + '...' : snippet.code}</code>
+                    </pre>
+                  </div>
+                </div>
+
+                {/* 3. Tags Section */}
+                <div className="border-t border-gray-600/30 p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {snippet.tags && snippet.tags.length > 0 ? (
+                      <>
+                        {snippet.tags.slice(0, 3).map((tag, index) => (
+                          <span key={index} className="px-2 py-1 text-xs bg-gray-700/50 text-gray-300 rounded-md">
+                            #{tag}
+                          </span>
+                        ))}
+                        {snippet.tags.length > 3 && (
+                          <span className="px-2 py-1 text-xs bg-gray-600/50 text-gray-400 rounded-md">
+                            +{snippet.tags.length - 3} more
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="px-2 py-1 text-xs bg-gray-700/30 text-gray-500 rounded-md italic">
+                        No tags added
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Category Section */}
+                {snippet.category_id && getCategoryInfo(snippet.category_id) && (
+                  <div className="border-t border-gray-600/30 p-4">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: `${getCategoryInfo(snippet.category_id)?.color}20`, borderColor: getCategoryInfo(snippet.category_id)?.color, borderWidth: '2px' }}
+                      >
+                        <div style={{ color: getCategoryInfo(snippet.category_id)?.color }}>
+                          {renderCategoryIcon(getCategoryInfo(snippet.category_id)?.icon || 'other')}
+                        </div>
+                      </div>
+                      <span className="text-sm text-gray-300 group-hover:text-white transition-colors duration-150">
+                        {getCategoryInfo(snippet.category_id)?.name}
+                      </span>
+                    </div>
                   </div>
                 )}
 
-                {/* 3. Action Icons Section */}
-                <div className="border-b border-gray-600/30">
-                  <div className="grid grid-cols-5 gap-2 p-2 bg-gray-800 border border-gray-600 shadow-lg">
+                {/* 5. Date Section */}
+                <div className="border-t border-gray-600/30 p-4">
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <div className="flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      <span>Created {new Date(snippet.created_at).toLocaleDateString()}</span>
+                    </div>
+                    {isUpdated && (
+                      <div className="flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <span>Updated {new Date(snippet.updated_at).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 6. Action Buttons Footer */}
+                <div className="border-t border-gray-600/30 p-4 mt-auto">
+                  <div className="grid grid-cols-5 gap-2">
                     <motion.button
                       onClick={() => setViewingSnippet(snippet)}
                       className="flex justify-center items-center p-2.5 text-blue-300 bg-blue-500/10 hover:text-blue-400 hover:bg-blue-500/20 rounded-xl transition-all duration-150 cursor-pointer group/view border border-blue-400/30 hover:border-blue-400/50 shadow-sm hover:shadow-lg relative"
@@ -1452,77 +1937,6 @@ function SnippetsUserContent({ useUser }: any) {
                         DELETE SNIPPET
                       </div>
                     </motion.button>
-                  </div>
-                </div>
-
-                {/* 4. Language Preview Section */}
-                <div className="flex-1 border-b border-gray-600/30">
-                  <div className="bg-gray-900 p-3 border border-gray-600 shadow-inner h-full">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">{snippet.language} CODE</span>
-                      <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded-full">{snippet.code.split('\n').length} lines</span>
-                    </div>
-                    <div className="bg-[#2D2D2D] p-3 rounded-lg border border-gray-700">
-                      <pre className="text-xs text-gray-200 whitespace-pre-wrap overflow-hidden font-mono leading-relaxed">
-                        <code>{snippet.code.split('\n').slice(0, 3).join('\n')}</code>
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 5. Tags Section */}
-                {snippet.tags && snippet.tags.length > 0 && (
-                  <div className="bg-gray-800 border border-gray-600 border-b border-gray-600/30" style={{padding: '10px 17px'}}>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-semibold text-purple-300 uppercase tracking-wider">Tags:</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {snippet.tags.slice(0, 3).map((tag, index) => (
-                          <span
-                            key={index}
-                            className="inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 text-xs font-medium rounded-full border border-purple-400/30 hover:from-purple-500/30 hover:to-pink-500/30 transition-all duration-150 shadow-sm backdrop-blur-sm"
-                          >
-                            <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                            </svg>
-                            {tag}
-                          </span>
-                        ))}
-                        {snippet.tags.length > 3 && (
-                          <span className="inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-gray-600/30 to-gray-700/30 text-gray-300 text-xs font-medium rounded-full border border-gray-500/40 shadow-sm backdrop-blur-sm">
-                            +{snippet.tags.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 6. Footer Section - Created and Updated */}
-                <div className="p-4 bg-gray-800 border-t border-gray-600 mt-auto">
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3M19 19H5V5H19V19Z"/>
-                        <path d="M12 6V18M6 12H18"/>
-                      </svg>
-                      <span className="bg-gray-800/50 px-2 py-1 rounded-full border border-gray-600/30">Created {createdDate.toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric', 
-                        year: 'numeric'
-                      })}</span>
-                    </div>
-                    {isUpdated && (
-                      <div className="flex items-center gap-2 text-blue-400">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2M21 9V7L15 1H5C3.89 1 3 1.89 3 3V21C3 22.11 3.89 23 5 23H11V21H5V3H13V9H21Z"/>
-                        </svg>
-                        <span className="bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/30">Updated {updatedDate.toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric'
-                        })}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               </motion.div>
@@ -1840,6 +2254,30 @@ function SnippetsUserContent({ useUser }: any) {
                 </div>
               )}
 
+              {/* Category Selection */}
+              {categories.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Category (Optional)</label>
+                  <div className="relative">
+                    <select
+                      value={formData.category_id || ''}
+                      onChange={(e) => setFormData({ ...formData, category_id: e.target.value || null })}
+                      className="w-full px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400/50 cursor-pointer appearance-none pr-10 shadow-sm transition-all duration-200"
+                    >
+                      <option value="">No Category</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>🏷️ {category.name}</option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -1889,7 +2327,8 @@ function SnippetsUserContent({ useUser }: any) {
                       tags: [],
                       is_public: false,
                       is_favorite: false,
-                      folder_id: selectedFolderId
+                      folder_id: selectedFolderId,
+                      category_id: selectedCategoryId
                     })
                   }}
                   className="px-8 py-3 bg-gray-700 text-gray-200 rounded-xl hover:bg-gray-600 transition-all duration-300 font-semibold cursor-pointer"
@@ -1974,6 +2413,20 @@ function SnippetsUserContent({ useUser }: any) {
         onPermanentDelete={handlePermanentDelete}
         userId={user?.id || ''}
         onShowToast={(message, type) => addToast({ message, type })}
+      />
+
+      {/* Category Modals */}
+      <CreateCategoryModal
+        isOpen={showCreateCategory}
+        onClose={() => setShowCreateCategory(false)}
+        onSubmit={(data) => handleCreateCategory(data as CreateCategoryData)}
+      />
+
+      <CreateCategoryModal
+        isOpen={!!editingCategory}
+        onClose={() => setEditingCategory(null)}
+        onSubmit={(data) => handleUpdateCategory(data as CreateCategoryData)}
+        editingCategory={editingCategory}
       />
     </div>
   )
