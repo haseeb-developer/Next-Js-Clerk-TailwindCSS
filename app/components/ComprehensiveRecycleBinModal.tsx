@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { Snippet } from '@/lib/supabase'
 
-interface RecycleBinModalProps {
+interface ComprehensiveRecycleBinModalProps {
   isOpen: boolean
   onClose: () => void
   onRestore: (snippetId: string) => Promise<void>
@@ -53,14 +53,14 @@ interface RecycleBinData {
   categories: DeletedCategory[]
 }
 
-export function RecycleBinModal({
+export function ComprehensiveRecycleBinModal({
   isOpen,
   onClose,
   onRestore,
   onPermanentDelete,
   userId,
   onShowToast
-}: RecycleBinModalProps) {
+}: ComprehensiveRecycleBinModalProps) {
   const [recycleBinData, setRecycleBinData] = useState<RecycleBinData>({
     snippets: [],
     folders: [],

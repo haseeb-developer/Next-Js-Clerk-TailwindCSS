@@ -302,15 +302,15 @@ export default function OrganizePage() {
 
   const confirmDeleteFolder = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('folders')
-        .delete()
-        .eq('id', id)
+      const response = await fetch(`/api/folders/${id}/soft-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
 
-      if (error) throw error
+      if (!response.ok) throw new Error('Failed to delete folder')
 
       addToast({
-        message: 'Folder deleted successfully',
+        message: 'Folder moved to recycle bin',
         type: 'success'
       })
       setShowDeleteFolder(false)
@@ -402,18 +402,12 @@ export default function OrganizePage() {
     const categoryId = showDeleteConfirm.category.id
     
     try {
-      // Move snippets to uncategorized
-      await supabase
-        .from('snippets')
-        .update({ category_id: null })
-        .eq('category_id', categoryId)
+      const response = await fetch(`/api/categories/${categoryId}/soft-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
 
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', categoryId)
-
-      if (error) throw error
+      if (!response.ok) throw new Error('Failed to delete category')
 
       // Clear snippet list if the deleted category was selected
       if (selectedCategoryId === categoryId) {
@@ -423,7 +417,7 @@ export default function OrganizePage() {
       }
 
       addToast({
-        message: 'Category deleted successfully',
+        message: 'Category moved to recycle bin',
         type: 'success'
       })
       
@@ -752,6 +746,9 @@ export default function OrganizePage() {
                 </div>
                 <div className="flex gap-3">
                   <div className="relative">
+                    <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
                     <input
                       type="text"
                       placeholder="Search folders..."
@@ -759,9 +756,6 @@ export default function OrganizePage() {
                       onChange={(e) => setFolderSearchTerm(e.target.value)}
                       className="w-64 px-4 py-2 pl-10 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50"
                     />
-                    <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
                   </div>
                   <button
                     onClick={() => setShowCreateFolder(true)}
@@ -1180,6 +1174,9 @@ export default function OrganizePage() {
                 </div>
                 <div className="flex gap-3">
                   <div className="relative">
+                    <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
                     <input
                       type="text"
                       placeholder="Search categories..."
@@ -1187,9 +1184,6 @@ export default function OrganizePage() {
                       onChange={(e) => setCategorySearchTerm(e.target.value)}
                       className="w-64 px-4 py-2 pl-10 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-400/50"
                     />
-                    <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
                   </div>
                   <button
                     onClick={() => setShowCreateCategory(true)}

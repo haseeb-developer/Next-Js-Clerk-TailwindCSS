@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { supabase, type Snippet, type CreateSnippetData, type Folder, type CreateFolderData, type Category, type CreateCategoryData } from '../../lib/supabase'
 import { Toast, ToastContainer } from './Toast'
 import { DeleteConfirmationModal } from './DeleteConfirmationModal'
-import { RecycleBinModal } from './RecycleBinModal'
+import { ComprehensiveRecycleBinModal } from './ComprehensiveRecycleBinModal'
 import { ExportModal } from './ExportModal'
 import { ImportModal } from './ImportModal'
 import { CreateFolderModal } from './CreateFolderModal'
@@ -2508,8 +2508,8 @@ function SnippetsUserContent({ useUser }: any) {
         onClose={() => setShowAlert({ open: false, title: '', message: '' })}
       />
 
-      {/* Recycle Bin Modal */}
-      <RecycleBinModal
+      {/* Comprehensive Recycle Bin Modal */}
+      <ComprehensiveRecycleBinModal
         isOpen={showRecycleBin}
         onClose={() => setShowRecycleBin(false)}
         onRestore={handleRestoreSnippet}
