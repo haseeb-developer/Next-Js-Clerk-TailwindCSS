@@ -16,7 +16,7 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
     return (
       <div className="min-h-screen">
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-7xl mx-auto" >
             <div className="flex justify-between items-center h-20">
               <Link 
                 href="/dashboard" 
@@ -30,7 +30,7 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
                 </div>
                 <div className="hidden sm:block">
                   <span className="bg-gradient-to-r from-white via-indigo-200 to-purple-200 bg-clip-text text-transparent font-extrabold text-2xl font-montserrat">
-                    Code Snippet Manager
+                    Code Snippet V1
                   </span>
                   <div className="text-xs text-zinc-400 font-normal font-poppins">Professional Code Management</div>
                 </div>
@@ -121,7 +121,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen">
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-zinc-900/80 border-b border-zinc-800/50">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-7xl mx-auto" style={{ padding: '0 20px' }}>
             <div className="flex justify-between items-center h-16">
               <Link 
                 href="/dashboard" 
@@ -131,7 +131,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                   <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                     <span className="text-sm font-bold text-white font-montserrat">CS</span>
                   </div>
-                  <span className="hidden sm:block">Code Snippet Manager</span>
+                  <span className="hidden sm:block">Code Snippet V1</span>
                 </div>
               </Link>
             </div>
@@ -153,7 +153,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
       afterSignUpUrl="/dashboard"
     >
       <div className="min-h-screen">
-        <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">
+        <header className="sticky top-0 z-50 pl-[20px] pr-[20px] backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center h-20">
               {/* Logo Section */}
@@ -169,7 +169,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                 </div>
                 <div className="hidden sm:block">
                   <span className="bg-gradient-to-r from-white via-indigo-200 to-purple-200 bg-clip-text text-transparent font-extrabold text-2xl font-montserrat">
-                    Code Snippet Manager
+                    Code Snippet v1
                   </span>
                   <div className="text-xs text-zinc-400 font-normal font-poppins">Professional Code Management</div>
                 </div>
@@ -252,6 +252,17 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 } rounded-lg`}
                               >
                                 Snippets
+                              </Link>
+                              <Link 
+                                href="/organize"
+                                prefetch={true}
+                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
+                                  isActive('/organize') 
+                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30' 
+                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
+                                } rounded-lg`}
+                              >
+                                Organize
                               </Link>
                               <Link 
                                 href="/user-settings"
@@ -387,6 +398,18 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 Snippets
                               </Link>
                               <Link 
+                                href="/organize"
+                                prefetch={true}
+                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
+                                  isActive('/organize')
+                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
+                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
+                                }`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                              >
+                                Organize
+                              </Link>
+                              <Link 
                                 href="/user-settings"
                                 prefetch={true}
                                 className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
@@ -422,7 +445,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="max-w-7xl mx-auto">
+        <main className="max-w-7xl mx-auto" style={{ padding: '0 20px' }}>
           {children}
         </main>
       </div>

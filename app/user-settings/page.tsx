@@ -1,13 +1,7 @@
-import { currentUser } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
+'use client'
+
 import UserSettingsContent from '../components/UserSettingsContent'
 
-export default async function UserSettingsPage() {
-  const user = await currentUser()
-
-  if (!user) {
-    redirect('/sign-in')
-  }
-
+export default function UserSettingsPage() {
   return <UserSettingsContent />
 }

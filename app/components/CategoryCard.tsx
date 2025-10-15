@@ -109,8 +109,26 @@ export default function CategoryCard({
         </div>
       )}
 
+      {/* Snippet Count Badge */}
+      <div className="absolute top-4 right-4">
+        <div 
+          className="px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"
+          style={{ 
+            backgroundColor: `${category.color}20`,
+            color: category.color,
+            borderColor: `${category.color}40`,
+            borderWidth: '1px'
+          }}
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+          </svg>
+          {snippetCount}
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-7">
         <div className="flex items-center gap-3">
           <div 
             className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300"
@@ -125,7 +143,7 @@ export default function CategoryCard({
             </div>
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-bold text-white mb-1 line-clamp-1">
+            <h3 className="text-lg font-bold text-white line-clamp-1">
               {category.name}
             </h3>
             <p className="text-sm text-gray-400 line-clamp-2">
@@ -136,19 +154,13 @@ export default function CategoryCard({
       </div>
 
       {/* Stats */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: category.color }}></div>
-          <span className="text-sm text-gray-300">
-            {snippetCount} snippet{snippetCount !== 1 ? 's' : ''}
-          </span>
-        </div>
-        {category.is_default && (
+      {category.is_default && (
+        <div className="flex items-center justify-end mb-4">
           <span className="px-2 py-1 text-xs font-medium bg-gray-700/50 text-gray-300 rounded-full">
             Default
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Progress Bar */}
       <div className="w-full bg-gray-700/30 rounded-full h-1.5 mb-4">

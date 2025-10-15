@@ -660,7 +660,7 @@ export default function GuestModeSnippets() {
                         </h3>
                         <button
                           onClick={() => toggleFavorite(snippet)}
-                          className="p-2 hover:bg-zinc-700/50 rounded-lg transition-colors ml-2 flex-shrink-0"
+                          className="p-2 hover:bg-zinc-700/50 rounded-lg transition-colors ml-2 flex-shrink-0 cursor-pointer"
                         >
                           <svg 
                             className={`w-5 h-5 ${snippet.isFavorite ? 'text-yellow-400 fill-current' : 'text-zinc-400'}`} 
@@ -778,7 +778,7 @@ export default function GuestModeSnippets() {
                       </h3>
                       <button
                         onClick={() => toggleFavorite(snippet)}
-                        className="p-2 hover:bg-zinc-700/50 rounded-lg transition-colors ml-2 flex-shrink-0"
+                        className="p-2 hover:bg-zinc-700/50 rounded-lg transition-colors ml-2 flex-shrink-0 cursor-pointer"
                       >
                         <svg 
                           className={`w-5 h-5 ${snippet.isFavorite ? 'text-yellow-400 fill-current' : 'text-zinc-400'}`} 
@@ -852,7 +852,7 @@ export default function GuestModeSnippets() {
             <p className="text-zinc-400 mb-6">Create your first code snippet to get started</p>
             <button
               onClick={() => setShowCreateForm(true)}
-              className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 font-semibold"
+              className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 font-semibold cursor-pointer"
             >
               Create Snippet
             </button>
@@ -960,7 +960,7 @@ export default function GuestModeSnippets() {
                 <div className="flex items-center gap-4 mt-8">
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 font-semibold"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 font-semibold cursor-pointer"
                   >
                     {editingSnippet ? 'Update Snippet' : 'Create Snippet'}
                   </button>
@@ -978,7 +978,7 @@ export default function GuestModeSnippets() {
                         isFavorite: false
                       })
                     }}
-                    className="px-6 py-3 bg-zinc-700 text-zinc-300 rounded-xl hover:bg-zinc-600 transition-all duration-300 font-semibold"
+                    className="px-6 py-3 bg-zinc-700 text-zinc-300 rounded-xl hover:bg-zinc-600 transition-all duration-300 font-semibold cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -1002,14 +1002,14 @@ export default function GuestModeSnippets() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-4xl bg-zinc-900 rounded-2xl border border-zinc-700 shadow-2xl"
+              className="w-full max-w-4xl bg-zinc-900 rounded-2xl border border-zinc-700 shadow-2xl m-3"
             >
               <div className="p-6 border-b border-zinc-700">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-white">{viewingSnippet.title}</h2>
                   <button
                     onClick={() => setViewingSnippet(null)}
-                    className="p-2 hover:bg-zinc-700/50 rounded-lg transition-colors"
+                    className="p-2 hover:bg-zinc-700/50 rounded-lg transition-colors cursor-pointer"
                   >
                     <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path d="M6 18L18 6M6 6l12 12"/>
@@ -1030,12 +1030,12 @@ export default function GuestModeSnippets() {
               </div>
               
               <div className="p-6">
-                <div className="bg-zinc-800/50 rounded-xl p-4 border border-zinc-700">
+                <div className="bg-zinc-800/50 rounded-xl p-4 border border-zinc-700" style={{ maxHeight: '500px', overflowY: 'scroll' }}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-white">Code</h3>
                     <button
                       onClick={() => handleModalCopy(viewingSnippet.code)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                         modalCopyClicked
                           ? 'bg-green-500/20 text-green-400'
                           : 'bg-zinc-700/50 text-zinc-300 hover:bg-zinc-600/50'

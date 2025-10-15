@@ -182,5 +182,5 @@ Go ahead and:
 3. Click "New Folder" to create your first folder
 4. Start organizing your code snippets!
 
-Enjoy your beautifully organized code snippet manager! 🚀✨
+Enjoy your beautifully organized code snippet V1! 🚀✨
 

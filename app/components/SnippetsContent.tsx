@@ -89,6 +89,7 @@ function SnippetsUserContent({ useUser }: any) {
           const [showAllSnippets, setShowAllSnippets] = useState(false)
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
           const [viewingSnippet, setViewingSnippet] = useState<Snippet | null>(null)
+          const [activeTabs, setActiveTabs] = useState<{ [snippetId: string]: 'code' | 'tags' | 'category' | 'info' }>({})
           
           // Lock body scroll when modals are open
           useBodyScrollLock(showCreateForm || viewingSnippet !== null)
@@ -586,6 +587,16 @@ function SnippetsUserContent({ useUser }: any) {
       })
     }
   }, [addToast])
+
+  // Helper function to get active tab for a snippet
+  const getActiveTab = (snippetId: string) => {
+    return activeTabs[snippetId] || 'code'
+  }
+
+  // Helper function to set active tab for a snippet
+  const setSnippetActiveTab = (snippetId: string, tab: 'code' | 'tags' | 'category' | 'info') => {
+    setActiveTabs(prev => ({ ...prev, [snippetId]: tab }))
+  }
 
   const toggleFavorite = useCallback(async (snippet: Snippet) => {
     if (!user || !user.id) return
@@ -1090,9 +1101,8 @@ function SnippetsUserContent({ useUser }: any) {
 
 
         {/* Folders Section */}
-        <div className="mb-8 mx-5">
+        {/* <div className="mb-8 mx-5">
             <div className="bg-[#111B32] border border-gray-700 rounded-3xl overflow-hidden shadow-xl">
-              {/* Accordion Header (div to avoid nested button inside button hydration issues) */}
               <div
                 role="button"
                 onClick={() => setShowFoldersSection(!showFoldersSection)}
@@ -1147,10 +1157,8 @@ function SnippetsUserContent({ useUser }: any) {
                 </div>
               </div>
 
-              {/* Accordion Content */}
               <div className={`transition-all duration-300 overflow-hidden ${showFoldersSection ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div className="p-6">
-                  {/* Folder Search Bar */}
                   <div className="mb-6">
                     <div className="relative">
                       <input
@@ -1176,7 +1184,6 @@ function SnippetsUserContent({ useUser }: any) {
                     </div>
                   </div>
 
-                  {/* All Snippets Card */}
                   <div className="mb-6">
                     <div
                       onClick={() => setSelectedFolderId(null)}
@@ -1186,12 +1193,9 @@ function SnippetsUserContent({ useUser }: any) {
                         borderColor: selectedFolderId === null ? '#3B82F6' : '#374151'
                       }}
                     >
-                      {/* Gradient Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                       
-                      {/* Content */}
                       <div className="relative z-10 flex flex-col h-full">
-                        {/* Header: Icon and Title */}
                         <div className="flex items-center gap-4 mb-4">
                           <div 
                             className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0"
@@ -1208,7 +1212,6 @@ function SnippetsUserContent({ useUser }: any) {
                           </div>
                         </div>
 
-                        {/* Selected indicator */}
                         {selectedFolderId === null && (
                           <div className="absolute top-[-5px] right-[0px] flex items-center gap-1.5 text-xs font-medium" style={{ color: '#3B82F6' }}>
                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
@@ -1218,14 +1221,12 @@ function SnippetsUserContent({ useUser }: any) {
                           </div>
                         )}
 
-                        {/* Description */}
                         <div className="mb-4 flex-1">
                           <p className="text-gray-400 text-sm leading-relaxed line-clamp-2 break-words">
                             View all your snippets across all folders
                           </p>
                         </div>
 
-                        {/* Footer */}
                         <div className="flex items-center justify-between pt-4 border-t border-white/10 mt-auto">
                           <div className="flex items-center gap-2">
                             <div 
@@ -1243,7 +1244,6 @@ function SnippetsUserContent({ useUser }: any) {
                     </div>
                   </div>
 
-                  {/* Folders Grid */}
                   {filteredFolders.length > 0 ? (
                     <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                       {filteredFolders.map((folder) => {
@@ -1291,12 +1291,10 @@ function SnippetsUserContent({ useUser }: any) {
                 </div>
               </div>
             </div>
-          </div>
+        </div> */}
 
-        {/* Categories Section */}
-        <div className="mb-8 mx-5">
+        {/* <div className="mb-8 mx-5">
           <div className="bg-[#111B32] border border-gray-700 rounded-3xl overflow-hidden shadow-xl">
-            {/* Categories Accordion Header */}
             <div
               role="button"
               onClick={() => setShowCategoriesSection(!showCategoriesSection)}
@@ -1354,7 +1352,6 @@ function SnippetsUserContent({ useUser }: any) {
 
             {showCategoriesSection && (
               <div className="p-6">
-                {/* All Categories Card */}
                 <div 
                   className={`cursor-pointer transition-all duration-300 rounded-2xl border-2 p-6 mb-6 ${
                     selectedCategoryId === null 
@@ -1384,7 +1381,6 @@ function SnippetsUserContent({ useUser }: any) {
                   </div>
                 </div>
 
-                {/* Search Categories */}
                 {categories.length > 0 && (
                   <div className="relative mb-6">
                     <input
@@ -1400,7 +1396,6 @@ function SnippetsUserContent({ useUser }: any) {
                   </div>
                 )}
 
-                {/* Categories Grid */}
                 {filteredCategories.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredCategories.map((category) => (
@@ -1445,13 +1440,12 @@ function SnippetsUserContent({ useUser }: any) {
               </div>
             )}
           </div>
-        </div>
+        </div> */}
 
-        {/* Recent Snippets Section */}
         {recentSnippets.length > 0 && (
           <div className="mb-8 mx-5">
           <div className="bg-[#111B32] border border-gray-700 rounded-3xl overflow-hidden shadow-xl">
-              {/* Header */}
+          
               <div
                 role="button"
                 onClick={() => setShowRecentSnippets(!showRecentSnippets)}
@@ -1479,7 +1473,6 @@ function SnippetsUserContent({ useUser }: any) {
                 </button>
               </div>
 
-              {/* Content */}
               <div className={`transition-all duration-300 overflow-hidden ${showRecentSnippets ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div className="p-6">
                   <div className={`grid gap-6 ${
@@ -1549,7 +1542,6 @@ function SnippetsUserContent({ useUser }: any) {
                             </div>
                           </div>
 
-                          {/* Overlay with Search Icon */}
                           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
                             <motion.button
                               onClick={() => {
@@ -1753,98 +1745,209 @@ function SnippetsUserContent({ useUser }: any) {
                 transition={{ duration: 0.15 }}
                 whileHover={{ scale: 1.01 }}
               >
-                {/* 1. Title + Description Section (No border between them) */}
+                {/* Title + Description Section */}
                 <div className="p-4">
                   <h3 className="text-lg font-bold text-white group-hover:text-blue-300 transition-colors duration-150 mb-2" title={snippet.title}>
                     {snippet.title.length > 25 ? snippet.title.substring(0, 25) + '...' : snippet.title}
                   </h3>
                   {snippet.description && (
-                    <p className="text-gray-300 text-sm leading-relaxed group-hover:text-gray-200 transition-colors duration-150" title={snippet.description}>
-                      {snippet.description.length > 60 ? snippet.description.substring(0, 60) + '...' : snippet.description}
-                    </p>
+                    <>
+                      <p className="text-gray-300 text-sm leading-relaxed group-hover:text-gray-200 transition-colors duration-150" title={snippet.description}>
+                        {snippet.description.length > 60 ? snippet.description.substring(0, 60) + '...' : snippet.description}
+                      </p>
+                      <div className="border-b border-gray-700/50 mt-3"></div>
+                    </>
                   )}
                 </div>
 
-                {/* 2. Code Section */}
-                <div className="border-t border-gray-600/30 p-4">
-                  <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700 h-32">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">{snippet.language}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">CODE</span>
-                        <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded-full">{snippet.code.split('\n').length} lines</span>
+                {/* Modern Tabs Section */}
+                <div className="px-4 pb-4 flex-1 flex flex-col">
+                  {/* Tab Navigation */}
+                  <div className="flex bg-gray-900/50 rounded-lg p-1 mb-3 border border-gray-700/50">
+                    <button
+                      onClick={() => setSnippetActiveTab(snippet.id, 'code')}
+                      className={`flex-1 px-2 py-2 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer ${
+                        getActiveTab(snippet.id) === 'code'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                        Code
                       </div>
-                    </div>
-                    <pre className="text-gray-300 text-sm overflow-hidden whitespace-pre-wrap break-words h-20">
-                      <code>{snippet.code.length > 100 ? snippet.code.substring(0, 100) + '...' : snippet.code}</code>
-                    </pre>
+                    </button>
+                    <button
+                      onClick={() => setSnippetActiveTab(snippet.id, 'tags')}
+                      className={`flex-1 px-2 py-2 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer ${
+                        getActiveTab(snippet.id) === 'tags'
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M3 11l8 8a2 2 0 002.828 0l6.172-6.172a2 2 0 000-2.828l-8-8H5a2 2 0 00-2 2v6z" />
+                        </svg>
+                        Tags
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setSnippetActiveTab(snippet.id, 'category')}
+                      className={`flex-1 px-2 py-2 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer ${
+                        getActiveTab(snippet.id) === 'category'
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3h10a2 2 0 012 2v14l-7-3-7 3V5a2 2 0 012-2z" />
+                        </svg>
+                        Cat
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setSnippetActiveTab(snippet.id, 'info')}
+                      className={`flex-1 px-2 py-2 text-xs font-medium rounded-md transition-all duration-200 cursor-pointer ${
+                        getActiveTab(snippet.id) === 'info'
+                          ? 'bg-orange-600 text-white shadow-sm'
+                          : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Info
+                      </div>
+                    </button>
                   </div>
-                </div>
 
-                {/* 3. Tags Section */}
-                <div className="border-t border-gray-600/30 p-4">
-                  <div className="flex flex-wrap gap-2">
-                    {snippet.tags && snippet.tags.length > 0 ? (
-                      <>
-                        {snippet.tags.slice(0, 3).map((tag, index) => (
-                          <span key={index} className="px-2 py-1 text-xs bg-gray-700/50 text-gray-300 rounded-md">
-                            #{tag}
-                          </span>
-                        ))}
-                        {snippet.tags.length > 3 && (
-                          <span className="px-2 py-1 text-xs bg-gray-600/50 text-gray-400 rounded-md">
-                            +{snippet.tags.length - 3} more
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="px-2 py-1 text-xs bg-gray-700/30 text-gray-500 rounded-md italic">
-                        No tags added
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* 4. Category Section */}
-                {snippet.category_id && getCategoryInfo(snippet.category_id) && (
-                  <div className="border-t border-gray-600/30 p-4">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: `${getCategoryInfo(snippet.category_id)?.color}20`, borderColor: getCategoryInfo(snippet.category_id)?.color, borderWidth: '2px' }}
-                      >
-                        <div style={{ color: getCategoryInfo(snippet.category_id)?.color }}>
-                          {renderCategoryIcon(getCategoryInfo(snippet.category_id)?.icon || 'other')}
+                  {/* Tab Content */}
+                  <div className="h-[140px] bg-gray-900/30 rounded-lg p-3 border border-gray-700/30 flex-1">
+                    {getActiveTab(snippet.id) === 'code' && (
+                      <div className="h-full flex flex-col">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">{snippet.language}</span>
+                          <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded-full">{snippet.code.split('\n').length} lines</span>
+                        </div>
+                        <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700 h-[72px] overflow-hidden">
+                          <pre className="text-gray-300 text-sm overflow-hidden whitespace-pre-wrap break-words h-full leading-6">
+                            <code>{snippet.code.length > 200 ? snippet.code.substring(0, 200) + '...' : snippet.code}</code>
+                          </pre>
                         </div>
                       </div>
-                      <span className="text-sm text-gray-300 group-hover:text-white transition-colors duration-150">
-                        {getCategoryInfo(snippet.category_id)?.name}
-                      </span>
-                    </div>
-                  </div>
-                )}
+                    )}
 
-                {/* 5. Date Section */}
-                <div className="border-t border-gray-600/30 p-4">
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <div className="flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                      <span>Created {new Date(snippet.created_at).toLocaleDateString()}</span>
-                    </div>
-                    {isUpdated && (
-                      <div className="flex items-center gap-1">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        <span>Updated {new Date(snippet.updated_at).toLocaleDateString()}</span>
+                    {getActiveTab(snippet.id) === 'tags' && (
+                      <div className="h-full flex flex-wrap gap-2 content-start">
+                        {snippet.tags && snippet.tags.length > 0 ? (
+                          <>
+                            {snippet.tags.map((tag, index) => (
+                              <span key={index} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border border-blue-500/30 bg-blue-500/10 text-blue-200">
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M3 11l8 8a2 2 0 002.828 0l6.172-6.172a2 2 0 000-2.828l-8-8H5a2 2 0 00-2 2v6z" />
+                                </svg>
+                                {tag}
+                              </span>
+                            ))}
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-2 text-gray-500 text-xs">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            </svg>
+                            No tags added
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {getActiveTab(snippet.id) === 'category' && (
+                      <div className="h-full flex items-center">
+                        {snippet.category_id && getCategoryInfo(snippet.category_id) ? (
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-10 h-10 rounded-lg flex items-center justify-center"
+                              style={{ backgroundColor: `${getCategoryInfo(snippet.category_id)?.color}20`, borderColor: getCategoryInfo(snippet.category_id)?.color, borderWidth: '2px' }}
+                            >
+                              <div style={{ color: getCategoryInfo(snippet.category_id)?.color }}>
+                                {renderCategoryIcon(getCategoryInfo(snippet.category_id)?.icon || 'other')}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-sm text-gray-300 font-medium">
+                                {getCategoryInfo(snippet.category_id)?.name}
+                              </span>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Category assigned
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-gray-500 text-xs">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            </svg>
+                            {snippet.category_id ? 'No category found' : 'No category assigned'}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {getActiveTab(snippet.id) === 'info' && (
+                      <div className="h-full flex flex-col justify-center space-y-3">
+                        <div className="flex items-center gap-2 text-xs text-gray-300">
+                          <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="font-medium">Created:</span>
+                          <span className="text-gray-400">
+                            {new Date(snippet.created_at).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                        {isUpdated && (
+                          <div className="flex items-center gap-2 text-xs text-gray-300">
+                            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span className="font-medium">Updated:</span>
+                            <span className="text-gray-400">
+                              {new Date(snippet.updated_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                year: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-xs text-gray-300">
+                          <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                          </svg>
+                          <span className="font-medium">Lines:</span>
+                          <span className="text-gray-400">{snippet.code.split('\n').length}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-300">
+                          <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                          </svg>
+                          <span className="font-medium">Language:</span>
+                          <span className="text-gray-400">{snippet.language}</span>
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* 6. Action Buttons Footer */}
+                {/* Action Buttons Footer */}
                 <div className="border-t border-gray-600/30 p-4 mt-auto">
                   <div className="grid grid-cols-5 gap-2">
                     <motion.button
@@ -1974,7 +2077,7 @@ function SnippetsUserContent({ useUser }: any) {
       <AnimatePresence>
         {viewingSnippet && (
         <motion.div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-hidden"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6 sm:p-8 overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -1989,16 +2092,16 @@ function SnippetsUserContent({ useUser }: any) {
                 background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)',
                 border: '1px solid #0f172a'
               }} 
-              className="backdrop-blur-xl rounded-3xl p-8 shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto"
+              className="backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-y-auto"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.15 }}
               onClick={(e) => e.stopPropagation()}
             >
-            <div className="flex items-start justify-between mb-6 gap-4">
+            <div className="flex items-start justify-between mb-4 gap-4">
               <div className="flex-1 min-w-0">
-                <h2 className="text-3xl font-bold text-white mb-2 break-words">{viewingSnippet.title}</h2>
+                <h2 className="text-2xl font-bold text-white mb-2 break-words">{viewingSnippet.title}</h2>
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
                     {viewingSnippet.language}
@@ -2033,13 +2136,13 @@ function SnippetsUserContent({ useUser }: any) {
             </div>
             
             {viewingSnippet.description && (
-              <div className="mb-6">
-                <p className="text-gray-300 text-lg leading-relaxed break-words">{viewingSnippet.description}</p>
+              <div className="mb-4">
+                <p className="text-gray-300 text-base leading-relaxed break-words">{viewingSnippet.description}</p>
               </div>
             )}
 
-            <div className="bg-gray-900/50 rounded-2xl p-6 border border-gray-700/50">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-gray-900/50 rounded-2xl p-4 border border-gray-700/50">
+              <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold text-white">Code</h3>
                 <button
                   onClick={() => handleModalCopy(viewingSnippet.code)}
@@ -2073,8 +2176,8 @@ function SnippetsUserContent({ useUser }: any) {
             </div>
 
             {viewingSnippet.tags && viewingSnippet.tags.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold text-white mb-3">Tags</h3>
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold text-white mb-2">Tags</h3>
                 <div className="flex flex-wrap gap-2">
                   {viewingSnippet.tags.map((tag, index) => (
                     <span
