@@ -74,7 +74,7 @@ export function ConfirmDeleteFolderModal({ isOpen, folder, onClose, onConfirm }:
           <button
             disabled={!canDelete}
             onClick={() => onConfirm(folder.id)}
-            className={`px-5 py-2 rounded-xl text-white transition-colors ${canDelete ? 'bg-red-500 hover:bg-red-600' : 'bg-red-500/50 cursor-not-allowed'}`}
+            className={`px-5 py-2 rounded-xl text-white transition-colors cursor-pointer ${canDelete ? 'bg-red-500 hover:bg-red-600' : 'bg-red-500/50 cursor-not-allowed'}`}
           >
             Delete Folder
           </button>

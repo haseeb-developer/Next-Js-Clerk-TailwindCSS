@@ -243,6 +243,7 @@ function SnippetsUserContent({ useUser }: any) {
         .from('folders')
         .select('*')
         .eq('user_id', user.id)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -261,6 +262,7 @@ function SnippetsUserContent({ useUser }: any) {
         .from('categories')
         .select('*')
         .eq('user_id', user.id)
+        .is('deleted_at', null)
         .order('sort_order', { ascending: true })
 
       if (categoriesError) throw categoriesError
@@ -271,6 +273,7 @@ function SnippetsUserContent({ useUser }: any) {
         .from('snippets')
         .select('category_id')
         .eq('user_id', user.id)
+        .is('deleted_at', null)
 
       if (countError) throw countError
 
@@ -425,39 +428,22 @@ function SnippetsUserContent({ useUser }: any) {
     setShowDeleteConfirm(true)
   }
 
-  // Soft delete (move to recycle bin) or hard delete (fallback)
+  // Soft delete (move to recycle bin)
   const handleDeleteSnippet = useCallback(async (id: string) => {
     try {
-      // First try soft delete (new schema)
-      const { error } = await supabase
-        .from('snippets')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
+      const response = await fetch(`/api/snippets/${id}/soft-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
 
-      // If error (column doesn't exist), try hard delete (old schema)
-      if (error && (error.code === '42703' || error.code === 'PGRST204')) {
-        console.log('deleted_at column not found, using hard delete')
-        setHasNewSchema(false)
-        const { error: deleteError } = await supabase
-          .from('snippets')
-          .delete()
-          .eq('id', id)
-        
-        if (deleteError) throw deleteError
-        
-        addToast({
-          message: 'Snippet moved to recycle bin',
-          type: 'info'
-        })
-      } else if (error) {
-        throw error
-      } else {
-        setHasNewSchema(true)
-        addToast({
-          message: 'Snippet moved to recycle bin',
-          type: 'info'
-        })
+      if (!response.ok) {
+        throw new Error('Failed to delete snippet')
       }
+
+      addToast({
+        message: 'Snippet moved to recycle bin',
+        type: 'success'
+      })
       
       fetchSnippets()
     } catch (error) {

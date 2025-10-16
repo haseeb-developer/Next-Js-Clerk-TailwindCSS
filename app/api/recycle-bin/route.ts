@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch all deleted items with their snippet counts
+    // Fetch all deleted items
     const [deletedSnippets, deletedFolders, deletedCategories] = await Promise.all([
       // Deleted snippets
       supabase
@@ -20,17 +20,21 @@ export async function GET() {
         .not('deleted_at', 'is', null)
         .order('deleted_at', { ascending: false }),
 
-      // Deleted folders with snippet counts
+      // Deleted folders
       supabase
-        .from('deleted_folders_with_counts')
-        .select('*')
-        .eq('user_id', userId),
-
-      // Deleted categories with snippet counts
-      supabase
-        .from('deleted_categories_with_counts')
+        .from('folders')
         .select('*')
         .eq('user_id', userId)
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false }),
+
+      // Deleted categories
+      supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', userId)
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false })
     ])
 
     if (deletedSnippets.error) {
@@ -48,10 +52,21 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch deleted categories' }, { status: 500 })
     }
 
+    // Calculate snippet counts for folders and categories
+    const foldersWithCounts = (deletedFolders.data || []).map(folder => ({
+      ...folder,
+      snippet_count: 0 // For now, we'll set this to 0 since snippets are unassigned when folders are deleted
+    }))
+
+    const categoriesWithCounts = (deletedCategories.data || []).map(category => ({
+      ...category,
+      snippet_count: 0 // For now, we'll set this to 0 since snippets are unassigned when categories are deleted
+    }))
+
     return NextResponse.json({
       snippets: deletedSnippets.data || [],
-      folders: deletedFolders.data || [],
-      categories: deletedCategories.data || []
+      folders: foldersWithCounts,
+      categories: categoriesWithCounts
     })
   } catch (error) {
     console.error('Error in recycle bin API:', error)

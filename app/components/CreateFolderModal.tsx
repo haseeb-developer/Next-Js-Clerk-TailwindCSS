@@ -142,7 +142,7 @@ export function CreateFolderModal({ isOpen, onClose, onSubmit, editingFolder }: 
       <div style={{
         background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)',
         border: '1px solid #0f172a'
-      }} className="backdrop-blur-xl rounded-3xl p-8 shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-300">
+      }} className="backdrop-blur-xl rounded-3xl p-8 shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-300">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-white">
             {editingFolder ? 'Edit Folder' : 'Create New Folder'}
@@ -198,7 +198,7 @@ export function CreateFolderModal({ isOpen, onClose, onSubmit, editingFolder }: 
                   onClick={() => setFormData({ ...formData, color: color.value })}
                   className={`relative h-12 rounded-xl transition-all duration-200 cursor-pointer group ${
                     formData.color === color.value
-                      ? 'ring-2 ring-offset-2 ring-offset-gray-900 scale-110'
+                      ? 'scale-110'
                       : 'hover:scale-105'
                   }`}
                   style={{

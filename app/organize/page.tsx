@@ -60,6 +60,7 @@ export default function OrganizePage() {
         .from('folders')
         .select('*')
         .eq('user_id', user.id)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -70,6 +71,7 @@ export default function OrganizePage() {
         .from('snippets')
         .select('folder_id')
         .eq('user_id', user.id)
+        .is('deleted_at', null)
 
       if (countError) throw countError
 
@@ -97,6 +99,7 @@ export default function OrganizePage() {
         .from('categories')
         .select('*')
         .eq('user_id', user.id)
+        .is('deleted_at', null)
         .order('sort_order', { ascending: true })
 
       if (categoriesError) throw categoriesError
@@ -121,6 +124,7 @@ export default function OrganizePage() {
         .from('snippets')
         .select('category_id')
         .eq('user_id', user.id)
+        .is('deleted_at', null)
 
       if (countError) throw countError
 
@@ -146,6 +150,7 @@ export default function OrganizePage() {
         .select('*')
         .eq('user_id', user.id)
         .eq('folder_id', folderId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -166,6 +171,7 @@ export default function OrganizePage() {
         .select('*')
         .eq('user_id', user.id)
         .eq('category_id', categoryId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
       if (error) throw error
