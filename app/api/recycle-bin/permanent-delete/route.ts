@@ -37,34 +37,34 @@ export async function POST(request: NextRequest) {
 
       case 'folder':
         // Permanently delete folder and unlink snippets
-        const { data: folderData, error: folderError } = await supabase
-          .rpc('permanently_delete_folder', { folder_uuid: id })
+        const { error: folderError } = await supabase
+          .from('folders')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
 
         if (folderError) {
           console.error('Error permanently deleting folder:', folderError)
           return NextResponse.json({ error: 'Failed to permanently delete folder' }, { status: 500 })
         }
-
-        if (!folderData) {
-          return NextResponse.json({ error: 'Folder not found or already deleted' }, { status: 404 })
-        }
-        result = { message: 'Folder permanently deleted and snippets unlinked' }
+        result = { message: 'Folder permanently deleted' }
         break
 
       case 'category':
-        // Permanently delete category and unlink snippets
-        const { data: categoryData, error: categoryError } = await supabase
-          .rpc('permanently_delete_category', { category_uuid: id })
+        // Permanently delete category
+        const { error: categoryError } = await supabase
+          .from('categories')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
 
         if (categoryError) {
           console.error('Error permanently deleting category:', categoryError)
           return NextResponse.json({ error: 'Failed to permanently delete category' }, { status: 500 })
         }
-
-        if (!categoryData) {
-          return NextResponse.json({ error: 'Category not found or already deleted' }, { status: 404 })
-        }
-        result = { message: 'Category permanently deleted and snippets unlinked' }
+        result = { message: 'Category permanently deleted' }
         break
 
       default:

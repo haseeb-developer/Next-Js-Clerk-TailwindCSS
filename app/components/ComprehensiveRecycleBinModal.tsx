@@ -12,6 +12,7 @@ interface ComprehensiveRecycleBinModalProps {
   onPermanentDelete: (snippetId: string) => Promise<void>
   userId: string
   onShowToast: (message: string, type: 'success' | 'error' | 'info') => void
+  onRefresh?: () => void
 }
 
 interface DeletedSnippet extends Snippet {
@@ -59,7 +60,8 @@ export function ComprehensiveRecycleBinModal({
   onRestore,
   onPermanentDelete,
   userId,
-  onShowToast
+  onShowToast,
+  onRefresh
 }: ComprehensiveRecycleBinModalProps) {
   const [recycleBinData, setRecycleBinData] = useState<RecycleBinData>({
     snippets: [],
@@ -108,7 +110,16 @@ export function ComprehensiveRecycleBinModal({
   const getFilteredItems = () => {
     const allItems = getAllItems()
     if (activeTab === 'all') return allItems
-    return allItems.filter(item => item.type === activeTab.slice(0, -1)) // Remove 's' from end
+    
+    // Map tab names to item types correctly
+    const tabToTypeMap: { [key: string]: string } = {
+      'snippets': 'snippet',
+      'folders': 'folder', 
+      'categories': 'category'
+    }
+    
+    const itemType = tabToTypeMap[activeTab]
+    return allItems.filter(item => item.type === itemType)
   }
 
   const handleSelectAll = () => {
@@ -141,11 +152,19 @@ export function ComprehensiveRecycleBinModal({
 
       if (response.ok) {
         onShowToast(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} restored successfully`, 'success')
-        fetchRecycleBinData()
+        // Refresh the recycle bin data
+        await fetchRecycleBinData()
+        // Also refresh the main page data by calling the parent component's refresh function
+        if (onRefresh) {
+          onRefresh()
+        }
       } else {
-        onShowToast(`Failed to restore ${itemType}`, 'error')
+        const errorData = await response.json()
+        console.error('Restore error:', errorData)
+        onShowToast(`Failed to restore ${itemType}: ${errorData.error || 'Unknown error'}`, 'error')
       }
     } catch (error) {
+      console.error('Restore error:', error)
       onShowToast(`Failed to restore ${itemType}`, 'error')
     }
   }
@@ -160,11 +179,19 @@ export function ComprehensiveRecycleBinModal({
 
       if (response.ok) {
         onShowToast(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} permanently deleted`, 'success')
-        fetchRecycleBinData()
+        // Refresh the recycle bin data
+        await fetchRecycleBinData()
+        // Also refresh the main page data by calling the parent component's refresh function
+        if (onRefresh) {
+          onRefresh()
+        }
       } else {
-        onShowToast(`Failed to permanently delete ${itemType}`, 'error')
+        const errorData = await response.json()
+        console.error('Permanent delete error:', errorData)
+        onShowToast(`Failed to permanently delete ${itemType}: ${errorData.error || 'Unknown error'}`, 'error')
       }
     } catch (error) {
+      console.error('Permanent delete error:', error)
       onShowToast(`Failed to permanently delete ${itemType}`, 'error')
     }
   }
@@ -325,7 +352,7 @@ export function ComprehensiveRecycleBinModal({
               background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)',
               border: '1px solid #0f172a'
             }} 
-            className="backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden"
+            className="backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-6xl h-[600px] overflow-hidden"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -433,7 +460,7 @@ export function ComprehensiveRecycleBinModal({
         )}
 
         {/* Content */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto modal-scroll">
+        <div className="px-6 pt-6 pb-12 h-[400px] overflow-y-auto modal-scroll">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-gray-400">Loading deleted items...</div>
@@ -445,11 +472,23 @@ export function ComprehensiveRecycleBinModal({
                   <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Recycle Bin is Empty</h3>
-              <p className="text-gray-400">No deleted items found.</p>
+              <h3 className="text-lg font-semibold text-white mb-2">
+                {activeTab === 'all' ? 'Recycle Bin is Empty' :
+                 activeTab === 'snippets' ? 'No Deleted Snippets' :
+                 activeTab === 'folders' ? 'No Deleted Folders' :
+                 activeTab === 'categories' ? 'No Deleted Categories' :
+                 'No Deleted Items'}
+              </h3>
+              <p className="text-gray-400">
+                {activeTab === 'all' ? 'No deleted items found.' :
+                 activeTab === 'snippets' ? 'No deleted snippets found.' :
+                 activeTab === 'folders' ? 'No deleted folders found.' :
+                 activeTab === 'categories' ? 'No deleted categories found.' :
+                 'No items found.'}
+              </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 pb-8">
               {getFilteredItems().map((item) => renderItem(item, item.type))}
             </div>
           )}

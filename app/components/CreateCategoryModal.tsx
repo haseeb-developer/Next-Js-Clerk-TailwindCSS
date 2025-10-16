@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { CreateCategoryData, UpdateCategoryData } from '../../lib/supabase'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 interface CreateCategoryModalProps {
   isOpen: boolean
@@ -53,6 +54,9 @@ export default function CreateCategoryModal({
   onSubmit, 
   editingCategory 
 }: CreateCategoryModalProps) {
+  // Lock body scroll when modal is open
+  useBodyScrollLock(isOpen)
+
   const [formData, setFormData] = useState<CreateCategoryData>({
     name: '',
     description: '',

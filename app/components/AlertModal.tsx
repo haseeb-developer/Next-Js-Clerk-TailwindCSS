@@ -1,5 +1,7 @@
 'use client'
 
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+
 interface AlertModalProps {
   isOpen: boolean
   title: string
@@ -9,6 +11,9 @@ interface AlertModalProps {
 }
 
 export function AlertModal({ isOpen, title, message, variant = 'info', onClose }: AlertModalProps) {
+  // Lock body scroll when modal is open
+  useBodyScrollLock(isOpen)
+
   if (!isOpen) return null
   const accent = variant === 'error' ? 'text-red-400' : 'text-blue-400'
 

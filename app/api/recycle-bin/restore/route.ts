@@ -36,33 +36,33 @@ export async function POST(request: NextRequest) {
         break
 
       case 'folder':
-        // Restore folder using the database function
-        const { data: folderData, error: folderError } = await supabase
-          .rpc('restore_folder', { folder_uuid: id })
+        // Restore folder by setting deleted_at to null
+        const { error: folderError } = await supabase
+          .from('folders')
+          .update({ deleted_at: null })
+          .eq('id', id)
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
 
         if (folderError) {
           console.error('Error restoring folder:', folderError)
           return NextResponse.json({ error: 'Failed to restore folder' }, { status: 500 })
         }
-
-        if (!folderData) {
-          return NextResponse.json({ error: 'Folder not found or already restored' }, { status: 404 })
-        }
         result = { message: 'Folder restored successfully' }
         break
 
       case 'category':
-        // Restore category using the database function
-        const { data: categoryData, error: categoryError } = await supabase
-          .rpc('restore_category', { category_uuid: id })
+        // Restore category by setting deleted_at to null
+        const { error: categoryError } = await supabase
+          .from('categories')
+          .update({ deleted_at: null })
+          .eq('id', id)
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
 
         if (categoryError) {
           console.error('Error restoring category:', categoryError)
           return NextResponse.json({ error: 'Failed to restore category' }, { status: 500 })
-        }
-
-        if (!categoryData) {
-          return NextResponse.json({ error: 'Category not found or already restored' }, { status: 404 })
         }
         result = { message: 'Category restored successfully' }
         break

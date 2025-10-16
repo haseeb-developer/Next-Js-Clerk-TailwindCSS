@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Folder } from '../../lib/supabase'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 interface ConfirmDeleteFolderModalProps {
   isOpen: boolean
@@ -11,6 +12,9 @@ interface ConfirmDeleteFolderModalProps {
 }
 
 export function ConfirmDeleteFolderModal({ isOpen, folder, onClose, onConfirm }: ConfirmDeleteFolderModalProps) {
+  // Lock body scroll when modal is open
+  useBodyScrollLock(isOpen)
+
   const [value, setValue] = useState('')
   const requiredPhrase = 'CONFIRM DELETE'
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { CreateFolderData, Folder } from '../../lib/supabase'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 interface CreateFolderModalProps {
   isOpen: boolean
@@ -115,6 +116,9 @@ export function CreateFolderModal({ isOpen, onClose, onSubmit, editingFolder }: 
     icon: editingFolder?.icon || 'folder',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Lock body scroll when modal is open
+  useBodyScrollLock(isOpen)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

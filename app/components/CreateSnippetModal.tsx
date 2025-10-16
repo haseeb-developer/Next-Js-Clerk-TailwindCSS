@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { CreateSnippetData, Folder, Category, Snippet } from '../../lib/supabase'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 interface CreateSnippetModalProps {
   isOpen: boolean
@@ -24,6 +25,9 @@ export default function CreateSnippetModal({
   selectedCategoryId,
   editingSnippet
 }: CreateSnippetModalProps) {
+  // Lock body scroll when modal is open
+  useBodyScrollLock(isOpen)
+
   const [formData, setFormData] = useState<CreateSnippetData>({
     title: '',
     description: '',

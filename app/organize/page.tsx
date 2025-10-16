@@ -13,6 +13,7 @@ import { ConfirmDeleteFolderModal } from '../components/ConfirmDeleteFolderModal
 import { AlertModal } from '../components/AlertModal'
 import { ToastContainer } from '../components/Toast'
 import CreateSnippetModal from '../components/CreateSnippetModal'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 export default function OrganizePage() {
   const { user } = useUser()
@@ -50,6 +51,9 @@ export default function OrganizePage() {
   const [viewingSnippet, setViewingSnippet] = useState<Snippet | null>(null)
   const [modalCopyClicked, setModalCopyClicked] = useState(false)
   const [activeTabs, setActiveTabs] = useState<{ [snippetId: string]: 'code' | 'tags' | 'category' | 'info' }>({})
+
+  // Lock body scroll when modals are open
+  useBodyScrollLock(viewingSnippet !== null || showDeleteConfirm.open || showCreateSnippet || editingSnippet !== null)
 
   // Fetch folders
   const fetchFolders = useCallback(async () => {
