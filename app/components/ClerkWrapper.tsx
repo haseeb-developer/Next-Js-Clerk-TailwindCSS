@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { ProtectedLink } from './ProtectedLink'
+import { UnsavedChangesAlert } from './UnsavedChangesAlert'
+import { useNavigation } from '../contexts/NavigationContext'
 
 export default function ClerkWrapper({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false)
@@ -18,7 +20,7 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">
           <div className="max-w-7xl mx-auto" >
             <div className="flex justify-between items-center h-20">
-              <Link 
+              <ProtectedLink 
                 href="/dashboard" 
                 className="flex items-center gap-3 text-xl font-bold text-white hover:text-indigo-400 transition-all duration-300 group"
               >
@@ -34,7 +36,7 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
                   </span>
                   <div className="text-xs text-zinc-400 font-normal font-poppins">Professional Code Management</div>
                 </div>
-              </Link>
+              </ProtectedLink>
             </div>
           </div>
         </header>
@@ -52,6 +54,13 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
 function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
+  const { 
+    showUnsavedAlert, 
+    handleUnsavedAlertConfirm, 
+    handleUnsavedAlertCancel, 
+    handleAlertSave 
+  } = useNavigation()
+  
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [ClerkProvider, setClerkProvider] = useState<React.ComponentType<any> | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -123,7 +132,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-zinc-900/80 border-b border-zinc-800/50">
           <div className="max-w-7xl mx-auto" style={{ padding: '0 20px' }}>
             <div className="flex justify-between items-center h-16">
-              <Link 
+              <ProtectedLink 
                 href="/dashboard" 
                 className="flex items-center gap-2 text-xl font-bold text-white hover:text-indigo-400 transition-colors group"
               >
@@ -133,7 +142,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                   </div>
                   <span className="hidden sm:block">Code Snippet V1</span>
                 </div>
-              </Link>
+              </ProtectedLink>
             </div>
           </div>
         </header>
@@ -157,7 +166,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center h-20">
               {/* Logo Section */}
-              <Link
+              <ProtectedLink
                 href="/dashboard"
                 className="flex items-center gap-3 text-xl font-bold text-white hover:text-indigo-400 transition-all duration-300 group"
               >
@@ -173,13 +182,13 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                   </span>
                   <div className="text-xs text-zinc-400 font-normal font-poppins">Professional Code Management</div>
                 </div>
-              </Link>
+              </ProtectedLink>
 
               {/* Desktop Navigation */}
               <div className="hidden lg:flex items-center gap-8">
                 {isGuest ? (
                   <div className="flex items-center gap-4">
-                    <Link href="/guest-mode-snippets">
+                    <ProtectedLink href="/guest-mode-snippets">
                       <button className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
                         pathname === '/guest-mode-snippets'
                           ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
@@ -187,7 +196,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                       }`}>
                         Snippets
                       </button>
-                    </Link>
+                    </ProtectedLink>
                     <button
                       onClick={handleGuestSignOut}
                       className="px-6 py-3 text-sm font-semibold text-red-400 hover:text-red-300 transition-all duration-300 relative group cursor-pointer"
@@ -201,12 +210,12 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                     {SignedOut && (
                       <SignedOut>
                         <div className="flex items-center gap-4">
-                          <Link href="/choose-username">
+                          <ProtectedLink href="/choose-username">
                             <button className="px-6 py-3 text-sm font-semibold text-zinc-300 hover:text-white transition-all duration-300 relative group cursor-pointer">
                               <span className="relative z-10">Login as Guest</span>
                               <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/50 to-zinc-600/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                             </button>
-                          </Link>
+                          </ProtectedLink>
                           {SignInButton && (
                             <SignInButton forceRedirectUrl="/dashboard">
                               <button className="px-6 py-3 text-sm font-semibold text-zinc-300 hover:text-white transition-all duration-300 relative group cursor-pointer">
@@ -231,7 +240,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                 {SignedIn && (
                   <SignedIn>
                             <div className="flex items-center gap-6">
-                              <Link 
+                              <ProtectedLink 
                                 href="/dashboard"
                                 prefetch={true}
                                 className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
@@ -241,8 +250,8 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 } rounded-lg`}
                               >
                                 Dashboard
-                              </Link>
-                              <Link 
+                              </ProtectedLink>
+                              <ProtectedLink 
                                 href="/snippets"
                                 prefetch={true}
                                 className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
@@ -252,8 +261,8 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 } rounded-lg`}
                               >
                                 Snippets
-                              </Link>
-                              <Link 
+                              </ProtectedLink>
+                              <ProtectedLink 
                                 href="/organize"
                                 prefetch={true}
                                 className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
@@ -263,8 +272,8 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 } rounded-lg`}
                               >
                                 Organize
-                              </Link>
-                              <Link 
+                              </ProtectedLink>
+                              <ProtectedLink 
                                 href="/user-settings"
                                 prefetch={true}
                                 className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
@@ -274,8 +283,8 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 } rounded-lg`}
                               >
                                 Settings
-                              </Link>
-                              <Link 
+                              </ProtectedLink>
+                              <ProtectedLink 
                                 href="/credits"
                                 prefetch={true}
                                 className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
@@ -285,7 +294,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 } rounded-lg`}
                               >
                                 Credits
-                              </Link>
+                              </ProtectedLink>
                       {UserInfo && <UserInfo />}
                       {UserButton && (
                         <UserButton 
@@ -325,7 +334,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
               <div className="py-6 space-y-4 border-t border-zinc-700/30">
                 {isGuest ? (
                   <div className="space-y-4">
-                    <Link href="/guest-mode-snippets">
+                    <ProtectedLink href="/guest-mode-snippets">
                       <button className={`w-full px-6 py-4 text-left text-base font-semibold rounded-xl transition-all duration-300 cursor-pointer ${
                         pathname === '/guest-mode-snippets'
                           ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
@@ -333,7 +342,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                       }`}>
                         Snippets
                       </button>
-                    </Link>
+                    </ProtectedLink>
                     <button
                       onClick={handleGuestSignOut}
                       className="w-full px-6 py-4 text-left text-base font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all duration-300 cursor-pointer"
@@ -346,11 +355,11 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                     {SignedOut && (
                       <SignedOut>
                         <div className="space-y-4">
-                          <Link href="/choose-username">
+                          <ProtectedLink href="/choose-username">
                             <button className="w-full px-6 py-4 text-left text-base font-semibold text-zinc-300 hover:text-white hover:bg-zinc-700/30 rounded-xl transition-all duration-300 cursor-pointer">
                               Login as Guest
                             </button>
-                          </Link>
+                          </ProtectedLink>
                           {SignInButton && (
                             <SignInButton forceRedirectUrl="/dashboard">
                               <button className="w-full px-6 py-4 text-left text-base font-semibold text-zinc-300 hover:text-white hover:bg-zinc-700/30 rounded-xl transition-all duration-300 cursor-pointer">
@@ -373,7 +382,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                 {SignedIn && (
                   <SignedIn>
                             <div className="space-y-4">
-                              <Link 
+                              <ProtectedLink 
                                 href="/dashboard"
                                 prefetch={true}
                                 className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
@@ -384,8 +393,8 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 onClick={() => setIsMobileMenuOpen(false)}
                               >
                                 Dashboard
-                              </Link>
-                              <Link 
+                              </ProtectedLink>
+                              <ProtectedLink 
                                 href="/snippets"
                                 prefetch={true}
                                 className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
@@ -396,8 +405,8 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 onClick={() => setIsMobileMenuOpen(false)}
                               >
                                 Snippets
-                              </Link>
-                              <Link 
+                              </ProtectedLink>
+                              <ProtectedLink 
                                 href="/organize"
                                 prefetch={true}
                                 className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
@@ -408,8 +417,8 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 onClick={() => setIsMobileMenuOpen(false)}
                               >
                                 Organize
-                              </Link>
-                              <Link 
+                              </ProtectedLink>
+                              <ProtectedLink 
                                 href="/user-settings"
                                 prefetch={true}
                                 className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
@@ -420,8 +429,8 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 onClick={() => setIsMobileMenuOpen(false)}
                               >
                                 Settings
-                              </Link>
-                              <Link 
+                              </ProtectedLink>
+                              <ProtectedLink 
                                 href="/credits"
                                 prefetch={true}
                                 className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
@@ -432,7 +441,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                                 onClick={() => setIsMobileMenuOpen(false)}
                               >
                                 Credits
-                              </Link>
+                              </ProtectedLink>
                       {UserInfo && (
                         <div className="px-6 py-4 border-t border-zinc-700/30">
                           <UserInfo />
@@ -448,6 +457,14 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
         <main className="max-w-7xl mx-auto" style={{ padding: '0 20px' }}>
           {children}
         </main>
+        
+        {/* Unsaved Changes Alert */}
+        <UnsavedChangesAlert
+          isOpen={showUnsavedAlert}
+          onConfirm={handleUnsavedAlertConfirm}
+          onCancel={handleUnsavedAlertCancel}
+          onSave={handleAlertSave}
+        />
       </div>
     </ClerkProvider>
   )

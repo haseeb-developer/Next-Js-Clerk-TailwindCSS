@@ -14,10 +14,14 @@ import { AlertModal } from '../components/AlertModal'
 import { ToastContainer } from '../components/Toast'
 import CreateSnippetModal from '../components/CreateSnippetModal'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { useSwiperSettings } from '../hooks/useSwiperSettings'
+import { SwiperSlider } from '../components/SwiperSlider'
 
 export default function OrganizePage() {
   const { user } = useUser()
   const [activeTab, setActiveTab] = useState<'folders' | 'categories'>('folders')
+  const { settings: swiperSettings, isLoaded: swiperSettingsLoaded } = useSwiperSettings()
+  
   
   // Folders state
   const [folders, setFolders] = useState<Folder[]>([])
@@ -237,6 +241,7 @@ export default function OrganizePage() {
   const setSnippetActiveTab = (snippetId: string, tab: 'code' | 'tags' | 'category' | 'info') => {
     setActiveTabs(prev => ({ ...prev, [snippetId]: tab }))
   }
+
 
   // Folder CRUD functions
   const handleCreateFolder = async (data: CreateFolderData) => {
@@ -779,31 +784,68 @@ export default function OrganizePage() {
                 </div>
               </div>
 
-              {/* Folders Grid - 3 in a row */}
+              {/* Folders Grid/Swiper */}
               {filteredFolders.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredFolders.map((folder) => (
-                    <FolderCard
-                      key={folder.id}
-                      folder={folder}
-                      snippetCount={folderSnippetCounts[folder.id] || 0}
-                      isSelected={selectedFolderId === folder.id}
-                      onSelect={() => {
-                        const newSelectedId = selectedFolderId === folder.id ? null : folder.id
-                        setSelectedFolderId(newSelectedId)
-                        if (newSelectedId) {
-                          setShowSnippetsForFolder(newSelectedId)
-                          fetchSnippetsForFolder(newSelectedId)
-                        } else {
-                          setShowSnippetsForFolder(null)
-                          setSnippets([])
-                        }
+                swiperSettingsLoaded && swiperSettings.foldersSwiper && filteredFolders.length > 3 ? (
+                  <div className="overflow-hidden rounded-2xl">
+                    <SwiperSlider
+                      className="folders-swiper"
+                      slidesPerView={3}
+                      spaceBetween={24}
+                      breakpoints={{
+                        320: { slidesPerView: 1, spaceBetween: 16 },
+                        640: { slidesPerView: 2, spaceBetween: 20 },
+                        1024: { slidesPerView: 3, spaceBetween: 24 }
                       }}
-                      onEdit={() => setEditingFolder(folder)}
-                      onDelete={() => handleDeleteFolder(folder)}
-                    />
-                  ))}
-                </div>
+                    >
+                    {filteredFolders.map((folder) => (
+                      <FolderCard
+                        key={folder.id}
+                        folder={folder}
+                        snippetCount={folderSnippetCounts[folder.id] || 0}
+                        onEdit={() => setEditingFolder(folder)}
+                        onDelete={() => handleDeleteFolder(folder)}
+                        onSelect={(folderId) => {
+                          const newSelectedId = selectedFolderId === folderId ? null : folderId
+                          setSelectedFolderId(newSelectedId)
+                          if (newSelectedId) {
+                            setShowSnippetsForFolder(newSelectedId)
+                            fetchSnippetsForFolder(newSelectedId)
+                          } else {
+                            setShowSnippetsForFolder(null)
+                            setSnippets([])
+                          }
+                        }}
+                        isSelected={selectedFolderId === folder.id}
+                      />
+                    ))}
+                    </SwiperSlider>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredFolders.map((folder) => (
+                      <FolderCard
+                        key={folder.id}
+                        folder={folder}
+                        snippetCount={folderSnippetCounts[folder.id] || 0}
+                        onEdit={() => setEditingFolder(folder)}
+                        onDelete={() => handleDeleteFolder(folder)}
+                        onSelect={(folderId) => {
+                          const newSelectedId = selectedFolderId === folderId ? null : folderId
+                          setSelectedFolderId(newSelectedId)
+                          if (newSelectedId) {
+                            setShowSnippetsForFolder(newSelectedId)
+                            fetchSnippetsForFolder(newSelectedId)
+                          } else {
+                            setShowSnippetsForFolder(null)
+                            setSnippets([])
+                          }
+                        }}
+                        isSelected={selectedFolderId === folder.id}
+                      />
+                    ))}
+                  </div>
+                )
               ) : folderSearchTerm ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 mx-auto mb-4 bg-gray-700/50 rounded-2xl flex items-center justify-center">
@@ -1207,33 +1249,64 @@ export default function OrganizePage() {
                 </div>
               </div>
 
-              {/* Categories Grid - 3 in a row */}
+              {/* Categories Grid/Swiper */}
               {filteredCategories.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredCategories.map((category) => (
-                    <CategoryCard
-                      key={category.id}
-                      category={category}
-                      snippetCount={categorySnippetCounts[category.id] || 0}
-                      isSelected={selectedCategoryId === category.id}
-                      onClick={() => {
-                        const newSelectedId = selectedCategoryId === category.id ? null : category.id
-                        setSelectedCategoryId(newSelectedId)
-                        if (newSelectedId) {
-                          setShowSnippetsForCategory(newSelectedId)
-                          setShowSnippetsForFolder(null)
-                          setSelectedFolderId(null)
-                          fetchSnippetsForCategory(newSelectedId)
-                        } else {
-                          setShowSnippetsForCategory(null)
-                          setSnippets([])
-                        }
+                swiperSettingsLoaded && swiperSettings.categoriesSwiper && filteredCategories.length > 3 ? (
+                  <div className="overflow-hidden rounded-2xl">
+                    <SwiperSlider
+                      className="categories-swiper"
+                      slidesPerView={3}
+                      spaceBetween={24}
+                      breakpoints={{
+                        320: { slidesPerView: 1, spaceBetween: 16 },
+                        640: { slidesPerView: 2, spaceBetween: 20 },
+                        1024: { slidesPerView: 3, spaceBetween: 24 }
                       }}
-                      onEdit={() => setEditingCategory(category)}
-                      onDelete={() => handleDeleteCategory(category)}
-                    />
-                  ))}
-                </div>
+                    >
+                    {filteredCategories.map((category) => (
+                      <CategoryCard
+                        key={category.id}
+                        category={category}
+                        snippetCount={categorySnippetCounts[category.id] || 0}
+                        onEdit={() => setEditingCategory(category)}
+                        onDelete={() => handleDeleteCategory(category)}
+                        onClick={() => {
+                          const newSelectedId = showSnippetsForCategory === category.id ? null : category.id
+                          setShowSnippetsForCategory(newSelectedId)
+                          if (newSelectedId) {
+                            fetchSnippetsForCategory(newSelectedId)
+                          } else {
+                            setSnippets([])
+                          }
+                        }}
+                        isSelected={showSnippetsForCategory === category.id}
+                      />
+                    ))}
+                    </SwiperSlider>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredCategories.map((category) => (
+                      <CategoryCard
+                        key={category.id}
+                        category={category}
+                        snippetCount={categorySnippetCounts[category.id] || 0}
+                        onEdit={() => setEditingCategory(category)}
+                        onDelete={() => handleDeleteCategory(category)}
+                        onClick={() => {
+                          const newSelectedId = showSnippetsForCategory === category.id ? null : category.id
+                          setShowSnippetsForCategory(newSelectedId)
+                          if (newSelectedId) {
+                            fetchSnippetsForCategory(newSelectedId)
+                          } else {
+                            setSnippets([])
+                          }
+                        }}
+                        isSelected={showSnippetsForCategory === category.id}
+                      />
+                    ))}
+                  </div>
+                )
               ) : categorySearchTerm ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 mx-auto mb-4 bg-gray-700/50 rounded-2xl flex items-center justify-center">

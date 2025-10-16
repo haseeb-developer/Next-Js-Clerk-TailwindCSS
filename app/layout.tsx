@@ -4,6 +4,7 @@ import './globals.css'
 import ClerkWrapper from './components/ClerkWrapper'
 import { Analytics } from '@vercel/analytics/react'
 import { ClerkProvider } from '@clerk/nextjs'
+import { NavigationProvider } from './contexts/NavigationContext'
 
 const poppins = Poppins({
   variable: '--font-poppins',
@@ -18,7 +19,7 @@ const montserrat = Montserrat({
 })
 
 export const metadata: Metadata = {
-  title: 'Code Snippet Manager',
+  title: 'Code Snippet V1',
   description: 'A professional code snippet management application',
 }
 
@@ -40,10 +41,14 @@ export default function RootLayout({
             afterSignInUrl="/dashboard"
             afterSignUpUrl="/dashboard"
           >
-            <ClerkWrapper>{children}</ClerkWrapper>
+            <NavigationProvider>
+              <ClerkWrapper>{children}</ClerkWrapper>
+            </NavigationProvider>
           </ClerkProvider>
         ) : (
-          <ClerkWrapper>{children}</ClerkWrapper>
+          <NavigationProvider>
+            <ClerkWrapper>{children}</ClerkWrapper>
+          </NavigationProvider>
         )}
         <Analytics />
       </body>

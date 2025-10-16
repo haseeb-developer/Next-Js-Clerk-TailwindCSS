@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { SwiperSettings } from './SwiperSettings'
 
 interface DeviceInfo {
   type: string
@@ -104,6 +105,7 @@ export default function UserSettingsContent() {
     return () => clearInterval(timeInterval)
   }, [])
 
+
   if (!isClient) {
     return (
               <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
@@ -134,7 +136,11 @@ export default function UserSettingsContent() {
     )
   }
 
-  return <UserSettingsDisplay {...clerkComponents} deviceInfo={deviceInfo} timeInfo={timeInfo} />
+      return <UserSettingsDisplay 
+        {...clerkComponents} 
+        deviceInfo={deviceInfo} 
+        timeInfo={timeInfo}
+      />
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -165,6 +171,8 @@ function UserSettingsDisplay({ useUser, useAuth, deviceInfo, timeInfo }: any) {
       minute: '2-digit'
     })
   }
+
+
 
   return (
             <div className="min-h-[calc(100vh-5rem)] py-12">
@@ -229,6 +237,13 @@ function UserSettingsDisplay({ useUser, useAuth, deviceInfo, timeInfo }: any) {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Display Settings */}
+        <div className="mb-8">
+          <div className="bg-gradient-to-br from-zinc-900/60 to-zinc-800/40 backdrop-blur-xl rounded-3xl p-6 border border-zinc-700/50 shadow-2xl">
+                <SwiperSettings />
           </div>
         </div>
 
@@ -413,6 +428,7 @@ function UserSettingsDisplay({ useUser, useAuth, deviceInfo, timeInfo }: any) {
           </div>
         </div>
       </div>
+
     </div>
   )
 }
