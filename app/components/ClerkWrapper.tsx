@@ -84,6 +84,9 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
     if (path === '/dashboard') {
       return pathname === '/dashboard'
     }
+    if (path === '/choose-username') {
+      return pathname === '/choose-username'
+    }
     return pathname.startsWith(path)
   }
 
@@ -212,9 +215,15 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                       <SignedOut>
                         <div className="flex items-center gap-4">
                           <ProtectedLink href="/choose-username">
-                            <button className="px-6 py-3 text-sm font-semibold text-zinc-300 hover:text-white transition-all duration-300 relative group cursor-pointer">
+                            <button className={`px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-300 relative group cursor-pointer ${
+                              isActive('/choose-username')
+                                ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
+                                : 'text-zinc-300 hover:text-white'
+                            }`}>
                               <span className="relative z-10">Login as Guest</span>
-                              <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/50 to-zinc-600/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                              {!isActive('/choose-username') && (
+                                <div className="absolute inset-0 bg-gradient-to-r from-zinc-700/50 to-zinc-600/50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                              )}
                             </button>
                           </ProtectedLink>
                           {SignInButton && (
@@ -347,7 +356,11 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                       <SignedOut>
                         <div className="space-y-4">
                           <ProtectedLink href="/choose-username">
-                            <button className="w-full px-6 py-4 text-left text-base font-semibold text-zinc-300 hover:text-white hover:bg-zinc-700/30 rounded-xl transition-all duration-300 cursor-pointer">
+                            <button className={`w-full px-6 py-4 text-left text-base font-semibold rounded-xl transition-all duration-300 cursor-pointer ${
+                              isActive('/choose-username')
+                                ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
+                                : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
+                            }`}>
                               Login as Guest
                             </button>
                           </ProtectedLink>

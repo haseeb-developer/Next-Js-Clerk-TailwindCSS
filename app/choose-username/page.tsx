@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import { setGuestMode, getPreviousGuestUsernames, getGuestSnippetCount, hasReachedGuestAccountLimit, getGuestAccountCount } from '@/lib/guestMode'
 
 export default function ChooseUsername() {
@@ -12,6 +13,10 @@ export default function ChooseUsername() {
   const [previousUsernames, setPreviousUsernames] = useState<string[]>([])
   const [accountCount, setAccountCount] = useState(0)
   const [hasReachedLimit, setHasReachedLimit] = useState(false)
+  const [showComparisonModal, setShowComparisonModal] = useState(false)
+  const [closeProgress, setCloseProgress] = useState(0)
+  const [canClose, setCanClose] = useState(false)
+  const [hoveredCard, setHoveredCard] = useState<'guest' | 'account' | null>(null)
 
   useEffect(() => {
     // Check if already a guest user
@@ -28,7 +33,46 @@ export default function ChooseUsername() {
     setPreviousUsernames(savedUsernames)
     setAccountCount(count)
     setHasReachedLimit(reachedLimit)
+
+    // Show comparison modal after 3 seconds
+    const timer = setTimeout(() => {
+      setShowComparisonModal(true)
+    }, 3000)
+
+    return () => clearTimeout(timer)
   }, [router])
+
+  // Circular progress close button effect
+  useEffect(() => {
+    if (showComparisonModal && !canClose) {
+      const interval = setInterval(() => {
+        setCloseProgress(prev => {
+          if (prev >= 100) {
+            setCanClose(true)
+            clearInterval(interval)
+            return 100
+          }
+          return prev + 1
+        })
+      }, 50) // 5 seconds total (100 * 50ms)
+
+      return () => clearInterval(interval)
+    }
+  }, [showComparisonModal, canClose])
+
+  // Disable body scroll when modal is open
+  useEffect(() => {
+    if (showComparisonModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showComparisonModal])
 
   const adjectives = [
     'Swift', 'Bright', 'Clever', 'Mighty', 'Silent', 'Golden', 'Silver', 'Bold',
@@ -83,6 +127,13 @@ export default function ChooseUsername() {
     // Redirect to guest mode snippets page
     router.push('/guest-mode-snippets')
   }
+
+  const handleCloseModal = () => {
+    if (canClose) {
+      setShowComparisonModal(false)
+    }
+  }
+
 
   return (
     <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-12">
@@ -290,6 +341,378 @@ export default function ChooseUsername() {
           </div>
         </div>
       </div>
+
+      {/* Advanced Comparison Modal */}
+      <AnimatePresence>
+        {showComparisonModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-5"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 50 }}
+              className="w-[calc(100vw-40px)] max-h-[calc(100vh-40px)] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-3xl border border-gray-700/50 shadow-2xl overflow-y-auto relative"
+            >
+              {/* Circular Progress Close Button */}
+              <div className="absolute top-6 right-6 z-10">
+                <div className="relative w-16 h-16">
+                  <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
+                    {/* Background circle */}
+                    <path
+                      className="text-gray-700"
+                      strokeWidth="3"
+                      fill="none"
+                      d="M18 2.0845
+                        a 15.9155 15.9155 0 0 1 0 31.831
+                        a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    {/* Progress circle */}
+                    <path
+                      className="text-green-500 transition-all duration-300"
+                      strokeWidth="3"
+                      fill="none"
+                      strokeDasharray={`${closeProgress}, 100`}
+                      strokeLinecap="round"
+                      d="M18 2.0845
+                        a 15.9155 15.9155 0 0 1 0 31.831
+                        a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                  </svg>
+                  <button
+                    onClick={handleCloseModal}
+                    disabled={!canClose}
+                    className={`absolute inset-0 flex items-center justify-center rounded-full transition-all duration-300 ${
+                      canClose 
+                        ? 'bg-green-500/20 hover:bg-green-500/30 cursor-pointer' 
+                        : 'bg-transparent cursor-not-allowed'
+                    }`}
+                  >
+                    {canClose ? (
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    ) : (
+                      <span className="text-sm text-white font-bold">{Math.round(closeProgress)}%</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Header */}
+              <div className="text-center p-8 border-b border-gray-700/50">
+                <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-2">Choose Your Experience</h2>
+                <p className="text-gray-400 text-lg">Select the plan that fits your needs and unlock the full potential</p>
+              </div>
+
+              {/* Cards Container */}
+              <div className="p-8 h-auto overflow-y-auto pb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-auto">
+                  {/* Guest Mode Card */}
+                  <motion.div
+                    onHoverStart={() => setHoveredCard('guest')}
+                    onHoverEnd={() => setHoveredCard(null)}
+                    className={`relative bg-gradient-to-br from-slate-800/60 to-slate-900/80 rounded-3xl border-2 transition-all duration-500 ${
+                      hoveredCard === 'guest' 
+                        ? 'border-blue-500/60 shadow-2xl shadow-blue-500/25' 
+                        : 'border-slate-700/50 shadow-xl'
+                    }`}
+                  >
+                    <div className="p-8 pb-8 h-auto flex flex-col mb-4">
+                      {/* Guest Mode Header */}
+                      <div className="text-center mb-8">
+                        <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/40 relative overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                          <svg className="w-10 h-10 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-3xl font-bold text-white mb-3">Guest Mode</h3>
+                        <p className="text-slate-300 text-lg mb-4">Experience the platform without commitment</p>
+                        <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 text-sm font-semibold rounded-full border border-blue-400/30 backdrop-blur-sm">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          No Credit Card Required
+                        </div>
+                      </div>
+
+                      {/* Features List */}
+                      <div className="space-y-5 mb-8 flex-1">
+                        <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/50">
+                          <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            What&apos;s Included
+                          </h4>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Unlimited code snippet creation</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Syntax highlighting for 50+ languages</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Basic search and filtering</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Copy to clipboard functionality</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-red-900/20 rounded-xl p-4 border border-red-800/30">
+                          <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                            Limitations
+                          </h4>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-red-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-400">Data stored locally only (no cloud backup)</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-red-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-400">Maximum 3 guest accounts per device</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-red-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-400">No password management features</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-red-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-400">No advanced organization tools</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </motion.div>
+
+                  {/* Full Access Card */}
+                  <motion.div
+                    onHoverStart={() => setHoveredCard('account')}
+                    onHoverEnd={() => setHoveredCard(null)}
+                    className={`relative bg-gradient-to-br from-indigo-900/40 via-purple-900/30 to-pink-900/40 rounded-3xl border-2 transition-all duration-500 ${
+                      hoveredCard === 'account' 
+                        ? 'border-purple-500/60 shadow-2xl shadow-purple-500/25' 
+                        : 'border-purple-500/40 shadow-xl shadow-purple-500/15'
+                    }`}
+                  >
+                    {/* Recommended Badge */}
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                      <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-4 py-1 rounded-full text-sm font-bold shadow-lg">
+                        ⭐ RECOMMENDED
+                      </div>
+                    </div>
+
+                    <div className="p-8 pb-8 h-auto flex flex-col mb-4">
+                      {/* Full Access Header */}
+                      <div className="text-center mb-8">
+                        <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-purple-500/40 relative overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
+                          <svg className="w-10 h-10 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-3xl font-bold text-white mb-3">Full Access</h3>
+                        <p className="text-slate-300 text-lg mb-4">Complete professional solution</p>
+                        <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 text-sm font-semibold rounded-full border border-purple-400/30 backdrop-blur-sm">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Enterprise-Grade Security
+                        </div>
+                      </div>
+
+                      {/* Features List */}
+                      <div className="space-y-5 mb-8 flex-1">
+                        <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-700/30">
+                          <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Core Features
+                          </h4>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Complete password management suite</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Advanced code snippet organization</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Real-time cloud synchronization</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Unlimited storage across all devices</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-emerald-900/20 rounded-xl p-4 border border-emerald-700/30">
+                          <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Advanced Capabilities
+                          </h4>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">AI-powered password generation</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Advanced search & filtering</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Custom folders & categories</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Priority customer support</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-blue-900/20 rounded-xl p-4 border border-blue-700/30">
+                          <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            Security & Trust
+                          </h4>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">End-to-end encryption</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">Automatic data backup</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">GDPR compliant data handling</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <span className="text-slate-300">99.9% uptime guarantee</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
