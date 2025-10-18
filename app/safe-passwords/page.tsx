@@ -108,12 +108,22 @@ const getSupabaseClient = () => {
       supabaseAnonKey = urlParams.get('supabase_key') || null
     }
     
+    // Hardcoded fallback for Vercel deployment (you'll need to replace these with your actual values)
+    if (!supabaseUrl || !supabaseAnonKey) {
+      // Replace these with your actual Supabase credentials
+      supabaseUrl = 'https://akrqdinpdwfwfuomocar.supabase.co' // Replace with your actual URL
+      supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrcnFkaW5wZHdmd2Z1b21vY2FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNDAxMjQsImV4cCI6MjA3NTgxNjEyNH0.M0Z7EZc-YIQ09wIw9GTz6gOUn4U8yfYcL3GyoXlXtBc' // Replace with your actual anon key
+      console.warn('Using hardcoded Supabase credentials - Environment variables not available')
+      console.log('Supabase credentials loaded successfully')
+    }
+    
     console.log('Environment variables check:', {
       processEnvUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       processEnvKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       finalUrl: !!supabaseUrl,
       finalKey: !!supabaseAnonKey,
-      isBrowser: typeof window !== 'undefined'
+      isBrowser: typeof window !== 'undefined',
+      usingHardcoded: supabaseUrl === 'https://akrqdinpdwfwfuomocar.supabase.co'
     })
     
     // Check if we're in browser environment and have the required env vars
@@ -123,7 +133,6 @@ const getSupabaseClient = () => {
         console.log('Supabase client created successfully')
       } catch (error) {
         console.error('Failed to create Supabase client:', error)
-        // Don't return null, try to create a fallback client
         return null
       }
     } else {
@@ -432,7 +441,11 @@ export default function SafePasswordsPage() {
     try {
       const supabase = getSupabaseClient()
       if (!supabase) {
-        addToast({ message: 'Database connection not available', type: 'error' })
+        addToast({ 
+          message: 'Database connection failed. Please check your Supabase configuration.', 
+          type: 'error' 
+        })
+        console.error('Supabase client not available for password creation')
         return
       }
       
