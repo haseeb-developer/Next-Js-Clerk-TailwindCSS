@@ -90,7 +90,7 @@ export function TimeFilterDropdown({
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 px-4 py-3 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-xl transition-all duration-200 min-w-[200px]"
+        className="flex items-center gap-3 px-4 py-3 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-xl transition-all duration-200 min-w-[200px] cursor-pointer"
       >
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
@@ -131,7 +131,7 @@ export function TimeFilterDropdown({
               <button
                 key={option.id}
                 onClick={() => handleSelect(option.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-700/50 transition-colors duration-200 first:rounded-t-xl last:rounded-b-xl ${
+                className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-700/50 transition-colors duration-200 first:rounded-t-xl last:rounded-b-xl cursor-pointer ${
                   selectedId === option.id ? 'bg-gray-700/30' : ''
                 }`}
               >

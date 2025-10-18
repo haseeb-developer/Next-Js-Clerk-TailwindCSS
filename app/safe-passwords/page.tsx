@@ -10,17 +10,20 @@ import { SwiperSlider } from '../components/SwiperSlider'
 import { FilterDropdown } from '../components/FilterDropdown'
 import { TimeFilterDropdown } from '../components/TimeFilterDropdown'
 
-// Create Supabase client with proper error handling
+// Create Supabase client - will be created at runtime when needed
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let supabase: any = null
+
 const getSupabaseClient = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('Supabase environment variables are not configured')
-    return null
+  if (!supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (supabaseUrl && supabaseAnonKey) {
+      supabase = createClient(supabaseUrl, supabaseAnonKey)
+    }
   }
-  
-  return createClient(supabaseUrl, supabaseAnonKey)
+  return supabase
 }
 
 interface Password {
@@ -148,15 +151,15 @@ export default function SafePasswordsPage() {
   }
 
   const loadData = async () => {
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      console.error('Supabase client not available')
-      setIsLoading(false)
-      return
-    }
-
     setIsLoading(true)
     try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        console.error('Supabase client not available')
+        setIsLoading(false)
+        return
+      }
+      
       // Load all passwords (including deleted ones)
       const { data: allPasswordsData } = await supabase
         .from('passwords')
@@ -164,8 +167,8 @@ export default function SafePasswordsPage() {
         .order('created_at', { ascending: false })
 
       // Separate active and deleted passwords
-      const activePasswords = (allPasswordsData || []).filter(p => !p.is_deleted)
-      const deletedPasswords = (allPasswordsData || []).filter(p => p.is_deleted)
+      const activePasswords = (allPasswordsData || []).filter((p: Password) => !p.is_deleted)
+      const deletedPasswords = (allPasswordsData || []).filter((p: Password) => p.is_deleted)
 
       // Load folders
       const { data: foldersData } = await supabase
@@ -254,12 +257,6 @@ export default function SafePasswordsPage() {
   const handleCreatePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      addToast({ message: 'Database connection not available', type: 'error' })
-      return
-    }
-    
     // Check for duplicate username/email
     const existingPassword = passwords.find(p => 
       p.username.toLowerCase() === passwordForm.username.toLowerCase()
@@ -274,6 +271,12 @@ export default function SafePasswordsPage() {
     }
     
     try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        addToast({ message: 'Database connection not available', type: 'error' })
+        return
+      }
+      
       const { data, error } = await supabase
         .from('passwords')
         .insert([{
@@ -298,12 +301,6 @@ export default function SafePasswordsPage() {
     e.preventDefault()
     if (!editingPassword) return
 
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      addToast({ message: 'Database connection not available', type: 'error' })
-      return
-    }
-
     // Check for duplicate username/email (excluding current password)
     const existingPassword = passwords.find(p => 
       p.id !== editingPassword.id && 
@@ -319,6 +316,12 @@ export default function SafePasswordsPage() {
     }
     
     try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        addToast({ message: 'Database connection not available', type: 'error' })
+        return
+      }
+      
       const { error } = await supabase
         .from('passwords')
         .update({
@@ -365,16 +368,16 @@ export default function SafePasswordsPage() {
 
   // Actual delete functions (called after confirmation)
   const confirmDeletePassword = async (id: string) => {
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      addToast({ message: 'Database connection not available', type: 'error' })
-      return
-    }
-
     try {
       const passwordToDelete = passwords.find(p => p.id === id)
       if (!passwordToDelete) return
 
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        addToast({ message: 'Database connection not available', type: 'error' })
+        return
+      }
+      
       const { error } = await supabase
         .from('passwords')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
@@ -393,13 +396,13 @@ export default function SafePasswordsPage() {
   }
 
   const confirmDeleteFolder = async (folderId: string) => {
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      addToast({ message: 'Database connection not available', type: 'error' })
-      return
-    }
-
     try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        addToast({ message: 'Database connection not available', type: 'error' })
+        return
+      }
+      
       const { error } = await supabase
         .from('folders')
         .delete()
@@ -416,13 +419,13 @@ export default function SafePasswordsPage() {
   }
 
   const confirmDeleteCategory = async (categoryId: string) => {
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      addToast({ message: 'Database connection not available', type: 'error' })
-      return
-    }
-
     try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        addToast({ message: 'Database connection not available', type: 'error' })
+        return
+      }
+      
       // First, remove category from all passwords
       const { error: updateError } = await supabase
         .from('passwords')
@@ -449,13 +452,13 @@ export default function SafePasswordsPage() {
 
   // Recycle Bin functions
   const restorePassword = async (passwordId: string) => {
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      addToast({ message: 'Database connection not available', type: 'error' })
-      return
-    }
-
     try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        addToast({ message: 'Database connection not available', type: 'error' })
+        return
+      }
+      
       const { error } = await supabase
         .from('passwords')
         .update({ is_deleted: false, deleted_at: null })
@@ -477,13 +480,13 @@ export default function SafePasswordsPage() {
   }
 
   const permanentlyDeletePassword = async (passwordId: string) => {
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      addToast({ message: 'Database connection not available', type: 'error' })
-      return
-    }
-
     try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        addToast({ message: 'Database connection not available', type: 'error' })
+        return
+      }
+      
       const { error } = await supabase
         .from('passwords')
         .delete()
@@ -500,13 +503,13 @@ export default function SafePasswordsPage() {
   }
 
   const clearAllDeletedPasswords = async () => {
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      addToast({ message: 'Database connection not available', type: 'error' })
-      return
-    }
-
     try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        addToast({ message: 'Database connection not available', type: 'error' })
+        return
+      }
+      
       const { error } = await supabase
         .from('passwords')
         .delete()
@@ -523,13 +526,13 @@ export default function SafePasswordsPage() {
   }
 
   const handleToggleFavorite = async (id: string, isFavorite: boolean) => {
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      addToast({ message: 'Database connection not available', type: 'error' })
-      return
-    }
-
     try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        addToast({ message: 'Database connection not available', type: 'error' })
+        return
+      }
+      
       const { error } = await supabase
         .from('passwords')
         .update({ is_favorite: !isFavorite })
@@ -553,13 +556,13 @@ export default function SafePasswordsPage() {
   // Folder operations
   const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      addToast({ message: 'Database connection not available', type: 'error' })
-      return
-    }
-
     try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        addToast({ message: 'Database connection not available', type: 'error' })
+        return
+      }
+      
       const { data, error } = await supabase
         .from('password_folders')
         .insert([folderForm])
@@ -577,13 +580,13 @@ export default function SafePasswordsPage() {
   // Category operations
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = getSupabaseClient()
-    if (!supabase) {
-      addToast({ message: 'Database connection not available', type: 'error' })
-      return
-    }
-
     try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        addToast({ message: 'Database connection not available', type: 'error' })
+        return
+      }
+      
       const { data, error } = await supabase
         .from('password_categories')
         .insert([categoryForm])

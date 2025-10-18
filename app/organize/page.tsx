@@ -721,60 +721,38 @@ export default function OrganizePage() {
 
         {/* Tab Navigation */}
         <div className="mb-6 md:mb-8">
-          <div className="flex space-x-3 bg-gray-800/50 p-1 rounded-xl">
+          <div className="flex gap-2 bg-gray-800/50 backdrop-blur-xl rounded-2xl p-2 border border-gray-700/50 shadow-xl">
             <button
               onClick={() => setActiveTab('folders')}
-              className={`flex-1 px-4 md:px-6 py-3 md:py-4 rounded-xl font-semibold transition-all duration-300 relative overflow-hidden group ${
-                activeTab === 'folders'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-xl shadow-blue-500/25 scale-105'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-700/30 hover:shadow-lg hover:scale-[1.02]'
+              className={`flex-1 px-4 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 ${
+                activeTab === 'folders' 
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                  : 'text-gray-300 hover:bg-gray-700/30 hover:text-white cursor-pointer'
               }`}
             >
-              <div className="flex items-center justify-center gap-2 md:gap-3 cursor-pointer relative z-10">
-                <div className={`transition-all duration-300 ${activeTab === 'folders' ? 'scale-110' : 'group-hover:scale-110'}`}>
-                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-                  </svg>
-                </div>
-                <span className="text-sm font-medium">Folders</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-bold transition-all duration-300 ${
-                  activeTab === 'folders' 
-                    ? 'bg-white/20 text-white' 
-                    : 'bg-gray-600/50 text-gray-400 group-hover:bg-gray-500/50 group-hover:text-gray-300'
-                }`}>
-                  {folders.length}
-                </span>
-              </div>
-              {activeTab === 'folders' && (
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-blue-600/20 animate-pulse"></div>
-              )}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+              </svg>
+              Folders
+              <span className="bg-gray-600 text-white text-xs px-2 py-1 rounded-full">
+                {folders.length}
+              </span>
             </button>
             <button
               onClick={() => setActiveTab('categories')}
-              className={`flex-1 px-4 md:px-6 py-3 md:py-4 rounded-xl font-semibold transition-all duration-300 relative overflow-hidden group ${
-                activeTab === 'categories'
-                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-xl shadow-purple-500/25 scale-105'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-700/30 hover:shadow-lg hover:scale-[1.02]'
+              className={`flex-1 px-4 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 ${
+                activeTab === 'categories' 
+                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                  : 'text-gray-300 hover:bg-gray-700/30 hover:text-white cursor-pointer'
               }`}
             >
-              <div className="flex items-center justify-center gap-2 md:gap-3 cursor-pointer relative z-10">
-                <div className={`transition-all duration-300 ${activeTab === 'categories' ? 'scale-110' : 'group-hover:scale-110'}`}>
-                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                  </svg>
-                </div>
-                <span className="text-sm font-medium">Categories</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-bold transition-all duration-300 ${
-                  activeTab === 'categories' 
-                    ? 'bg-white/20 text-white' 
-                    : 'bg-gray-600/50 text-gray-400 group-hover:bg-gray-500/50 group-hover:text-gray-300'
-                }`}>
-                  {categories.length}
-                </span>
-              </div>
-              {activeTab === 'categories' && (
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-purple-600/20 animate-pulse"></div>
-              )}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+              </svg>
+              Categories
+              <span className="bg-gray-600 text-white text-xs px-2 py-1 rounded-full">
+                {categories.length}
+              </span>
             </button>
           </div>
         </div>
