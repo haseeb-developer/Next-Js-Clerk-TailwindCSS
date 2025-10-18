@@ -19,8 +19,24 @@ const getSupabaseClient = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
-    if (supabaseUrl && supabaseAnonKey) {
-      supabase = createClient(supabaseUrl, supabaseAnonKey)
+    // Check if we're in browser environment and have the required env vars
+    if (typeof window !== 'undefined' && supabaseUrl && supabaseAnonKey) {
+      try {
+        supabase = createClient(supabaseUrl, supabaseAnonKey)
+        console.log('Supabase client created successfully')
+      } catch (error) {
+        console.error('Failed to create Supabase client:', error)
+        return null
+      }
+    } else {
+      console.warn('Supabase environment variables not available:', {
+        supabaseUrl: !!supabaseUrl,
+        supabaseAnonKey: !!supabaseAnonKey,
+        isBrowser: typeof window !== 'undefined',
+        urlValue: supabaseUrl ? 'present' : 'missing',
+        keyValue: supabaseAnonKey ? 'present' : 'missing'
+      })
+      return null
     }
   }
   return supabase
@@ -129,9 +145,28 @@ export default function SafePasswordsPage() {
   // Load data
   useEffect(() => {
     if (isSignedIn) {
-    loadData()
+      loadData()
     }
   }, [isSignedIn])
+
+  // Retry database connection if it fails initially
+  useEffect(() => {
+    if (isSignedIn && !isLoading) {
+      const retryConnection = () => {
+        const supabase = getSupabaseClient()
+        if (!supabase) {
+          console.log('Retrying database connection...')
+          setTimeout(() => {
+            loadData()
+          }, 2000)
+        }
+      }
+      
+      // Retry after 2 seconds if no data is loaded
+      const timer = setTimeout(retryConnection, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [isSignedIn, isLoading])
 
   // Show loading while checking authentication
   if (!isLoaded) {
@@ -145,6 +180,15 @@ export default function SafePasswordsPage() {
     )
   }
 
+  // Debug environment variables in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Environment variables check:', {
+      supabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      isBrowser: typeof window !== 'undefined'
+    })
+  }
+
   // Don't render anything if not signed in (will redirect)
   if (!isSignedIn) {
     return null
@@ -155,7 +199,8 @@ export default function SafePasswordsPage() {
     try {
       const supabase = getSupabaseClient()
       if (!supabase) {
-        console.error('Supabase client not available')
+        console.error('Supabase client not available - environment variables may not be set')
+        addToast({ message: 'Database connection not available. Please check your configuration.', type: 'error' })
         setIsLoading(false)
         return
       }
