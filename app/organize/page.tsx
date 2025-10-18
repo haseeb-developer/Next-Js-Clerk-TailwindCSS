@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useUser, useAuth } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import type { Folder, Category, CreateFolderData, UpdateFolderData, CreateCategoryData, UpdateCategoryData, Snippet, CreateSnippetData } from '../../lib/supabase'
@@ -19,6 +20,8 @@ import { SwiperSlider } from '../components/SwiperSlider'
 
 export default function OrganizePage() {
   const { user } = useUser()
+  const { isSignedIn, isLoaded } = useAuth()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<'folders' | 'categories'>('folders')
   const { settings: swiperSettings, isLoaded: swiperSettingsLoaded } = useSwiperSettings()
   
@@ -98,31 +101,6 @@ export default function OrganizePage() {
     }
   }, [user])
 
-  // Fetch categories
-  const fetchCategories = useCallback(async () => {
-    if (!user?.id) return
-
-    try {
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', user.id)
-        .is('deleted_at', null)
-        .order('sort_order', { ascending: true })
-
-      if (categoriesError) throw categoriesError
-      setCategories(categoriesData || [])
-
-      // Fetch snippet counts for each category
-      await fetchCategorySnippetCounts()
-
-    } catch (error) {
-      console.error('Error fetching categories:', error)
-      setCategories([])
-      setCategorySnippetCounts({})
-    }
-  }, [user])
-
   // Fetch snippet counts for categories
   const fetchCategorySnippetCounts = useCallback(async () => {
     if (!user?.id) return
@@ -147,6 +125,31 @@ export default function OrganizePage() {
       console.error('Error fetching snippet counts:', error)
     }
   }, [user])
+
+  // Fetch categories
+  const fetchCategories = useCallback(async () => {
+    if (!user?.id) return
+
+    try {
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .order('sort_order', { ascending: true })
+
+      if (categoriesError) throw categoriesError
+      setCategories(categoriesData || [])
+
+      // Fetch snippet counts for each category
+      await fetchCategorySnippetCounts()
+
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      setCategories([])
+      setCategorySnippetCounts({})
+    }
+  }, [user, fetchCategorySnippetCounts])
 
   // Fetch snippets for a specific folder
   const fetchSnippetsForFolder = useCallback(async (folderId: string) => {
@@ -200,13 +203,13 @@ export default function OrganizePage() {
   }, [user, fetchFolders, fetchCategories])
 
   // Toast management
-  const addToast = (toast: { message: string; type: 'success' | 'error' | 'info' }) => {
+  const addToast = useCallback((toast: { message: string; type: 'success' | 'error' | 'info' }) => {
     const id = Math.random().toString(36).substr(2, 9)
     setToasts(prev => [...prev, { ...toast, id }])
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id))
     }, 5000)
-  }
+  }, [])
 
   const removeToast = (id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id))
@@ -231,6 +234,30 @@ export default function OrganizePage() {
       })
     }
   }, [addToast])
+
+  // Redirect to sign-in if not authenticated
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.replace('/sign-in')
+    }
+  }, [isLoaded, isSignedIn, router])
+
+  // Show loading while checking authentication
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
+          <p className="text-gray-400 mt-4">Loading authentication...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render anything if not signed in (will redirect)
+  if (!isSignedIn) {
+    return null
+  }
 
   // Helper function to get active tab for a snippet
   const getActiveTab = (snippetId: string) => {
@@ -656,16 +683,16 @@ export default function OrganizePage() {
 
   return (
     <div className="min-h-screen ">
-      <div className="max-w-[2000px] mx-auto pt-[40px] py-8">
+      <div className="max-w-[2000px] mx-auto pt-6 md:pt-8 lg:pt-[40px] py-4 md:py-6 lg:py-8 px-4 md:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="mb-6 md:mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-white mb-2">Organize Your Library</h1>
-              <p className="text-gray-300 text-lg">Manage your folders and categories to keep your code snippets organized</p>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2 leading-tight">Organize Your Library</h1>
+              <p className="text-gray-300 text-sm md:text-base lg:text-lg leading-relaxed">Manage your folders and categories to keep your code snippets organized</p>
             </div>
             {(selectedFolderId || selectedCategoryId) && (
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                 <button
                   onClick={() => {
                     setSelectedFolderId(null)
@@ -674,13 +701,13 @@ export default function OrganizePage() {
                     setSnippets([])
                     setSnippetSearchTerm('')
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-colors cursor-pointer w-full md:w-auto"
                 >
                   Clear Selected
                 </button>
                 <button
                   onClick={() => setShowCreateSnippet(true)}
-                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 font-medium flex items-center gap-2 cursor-pointer"
+                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 font-medium flex items-center justify-center gap-2 cursor-pointer w-full md:w-auto"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
@@ -693,23 +720,23 @@ export default function OrganizePage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <div className="flex space-x-3 bg-gray-800/50 p-1 rounded-xl">
             <button
               onClick={() => setActiveTab('folders')}
-              className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all duration-300 relative overflow-hidden group ${
+              className={`flex-1 px-4 md:px-6 py-3 md:py-4 rounded-xl font-semibold transition-all duration-300 relative overflow-hidden group ${
                 activeTab === 'folders'
                   ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-xl shadow-blue-500/25 scale-105'
                   : 'text-gray-300 hover:text-white hover:bg-gray-700/30 hover:shadow-lg hover:scale-[1.02]'
               }`}
             >
-              <div className="flex items-center justify-center gap-3 cursor-pointer relative z-10">
+              <div className="flex items-center justify-center gap-2 md:gap-3 cursor-pointer relative z-10">
                 <div className={`transition-all duration-300 ${activeTab === 'folders' ? 'scale-110' : 'group-hover:scale-110'}`}>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                   </svg>
                 </div>
-                <span className="text-sm">Folders</span>
+                <span className="text-sm font-medium">Folders</span>
                 <span className={`px-2 py-1 rounded-full text-xs font-bold transition-all duration-300 ${
                   activeTab === 'folders' 
                     ? 'bg-white/20 text-white' 
@@ -724,19 +751,19 @@ export default function OrganizePage() {
             </button>
             <button
               onClick={() => setActiveTab('categories')}
-              className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all duration-300 relative overflow-hidden group ${
+              className={`flex-1 px-4 md:px-6 py-3 md:py-4 rounded-xl font-semibold transition-all duration-300 relative overflow-hidden group ${
                 activeTab === 'categories'
                   ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-xl shadow-purple-500/25 scale-105'
                   : 'text-gray-300 hover:text-white hover:bg-gray-700/30 hover:shadow-lg hover:scale-[1.02]'
               }`}
             >
-              <div className="flex items-center justify-center gap-3 cursor-pointer relative z-10">
+              <div className="flex items-center justify-center gap-2 md:gap-3 cursor-pointer relative z-10">
                 <div className={`transition-all duration-300 ${activeTab === 'categories' ? 'scale-110' : 'group-hover:scale-110'}`}>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                   </svg>
                 </div>
-                <span className="text-sm">Categories</span>
+                <span className="text-sm font-medium">Categories</span>
                 <span className={`px-2 py-1 rounded-full text-xs font-bold transition-all duration-300 ${
                   activeTab === 'categories' 
                     ? 'bg-white/20 text-white' 
@@ -753,17 +780,17 @@ export default function OrganizePage() {
         </div>
 
         {/* Content Area */}
-        <div className="bg-[#111B32] border border-gray-700 rounded-3xl p-8 shadow-xl">
+        <div className="bg-[#111B32] border border-gray-700 rounded-2xl md:rounded-3xl p-4 md:p-6 lg:p-8 shadow-xl">
           {activeTab === 'folders' ? (
             <div>
               {/* Folders Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 md:mb-8 gap-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Your Folders</h2>
-                  <p className="text-gray-300">Organize your snippets into folders for better management</p>
+                  <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Your Folders</h2>
+                  <p className="text-gray-300 text-sm md:text-base">Organize your snippets into folders for better management</p>
                 </div>
-                <div className="flex gap-3">
-                  <div className="relative">
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                  <div className="relative w-full md:w-64">
                     <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
@@ -772,12 +799,12 @@ export default function OrganizePage() {
                       placeholder="Search folders..."
                       value={folderSearchTerm}
                       onChange={(e) => setFolderSearchTerm(e.target.value)}
-                      className="w-64 px-4 py-2 pl-10 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50"
+                      className="w-full px-4 py-2 pl-10 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 text-sm"
                     />
                   </div>
                   <button
                     onClick={() => setShowCreateFolder(true)}
-                    className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 font-medium flex items-center gap-2 cursor-pointer"
+                    className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 font-medium flex items-center justify-center gap-2 cursor-pointer w-full md:w-auto"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
@@ -825,7 +852,7 @@ export default function OrganizePage() {
                     </SwiperSlider>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredFolders.map((folder) => (
                       <FolderCard
                         key={folder.id}
@@ -867,10 +894,10 @@ export default function OrganizePage() {
                     </svg>
                   </div>
                   <h3 className="text-xl font-semibold text-gray-300 mb-2">No folders yet</h3>
-                  <p className="text-gray-500 mb-6">Create your first folder to organize your snippets</p>
+                  <p className="text-gray-500 mb-6 text-sm md:text-base px-4">Create your first folder to organize your snippets</p>
                   <button
                     onClick={() => setShowCreateFolder(true)}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 font-medium cursor-pointer"
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 font-medium cursor-pointer text-sm"
                   >
                     Create Your First Folder
                   </button>
@@ -879,12 +906,12 @@ export default function OrganizePage() {
 
               {/* Show snippets for selected folder */}
               {showSnippetsForFolder && (
-                <div className="mt-8">
-                  <div className="mb-6">
+                <div className="mt-6 sm:mt-8">
+                  <div className="mb-4 sm:mb-6">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="text-xl font-bold text-white mb-2">Snippets in this folder</h3>
-                        <p className="text-gray-300">
+                        <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Snippets in this folder</h3>
+                        <p className="text-gray-300 text-sm sm:text-base">
                           {filteredSnippets.length} of {snippets.length} snippet{snippets.length !== 1 ? 's' : ''} found
                         </p>
                       </div>
@@ -893,7 +920,7 @@ export default function OrganizePage() {
                     {/* Search bar for snippets */}
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                       </div>
@@ -902,21 +929,21 @@ export default function OrganizePage() {
                         placeholder="Search snippets in this folder..."
                         value={snippetSearchTerm}
                         onChange={(e) => setSnippetSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                       />
                     </div>
                   </div>
 
                   {filteredSnippets.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                       {filteredSnippets.map((snippet) => (
                         <div
                           key={snippet.id}
-                          className="bg-gray-800 rounded-2xl border border-gray-600 shadow-xl hover:shadow-2xl hover:border-gray-500 transition-all duration-150 group overflow-hidden p-6"
+                          className="bg-gray-800 rounded-xl sm:rounded-2xl border border-gray-600 shadow-xl hover:shadow-2xl hover:border-gray-500 transition-all duration-150 group overflow-hidden p-4 sm:p-6"
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <h4 className="text-lg font-semibold text-white mb-2 line-clamp-2">
+                              <h4 className="text-base sm:text-lg font-semibold text-white mb-2 line-clamp-2">
                                 {snippet.title}
                               </h4>
                               {snippet.description && (
@@ -1222,13 +1249,13 @@ export default function OrganizePage() {
           ) : (
             <div>
               {/* Categories Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 md:mb-8 gap-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Your Categories</h2>
-                  <p className="text-gray-300">Categorize your snippets with colors and icons</p>
+                  <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Your Categories</h2>
+                  <p className="text-gray-300 text-sm md:text-base">Categorize your snippets with colors and icons</p>
                 </div>
-                <div className="flex gap-3">
-                  <div className="relative">
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                  <div className="relative w-full md:w-64">
                     <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
@@ -1237,12 +1264,12 @@ export default function OrganizePage() {
                       placeholder="Search categories..."
                       value={categorySearchTerm}
                       onChange={(e) => setCategorySearchTerm(e.target.value)}
-                      className="w-64 px-4 py-2 pl-10 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-400/50"
+                      className="w-full px-4 py-2 pl-10 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-400/50 text-sm"
                     />
                   </div>
                   <button
                     onClick={() => setShowCreateCategory(true)}
-                    className="px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 font-medium flex items-center gap-2 cursor-pointer"
+                    className="px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 font-medium flex items-center justify-center gap-2 cursor-pointer w-full md:w-auto"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
@@ -1288,7 +1315,7 @@ export default function OrganizePage() {
                     </SwiperSlider>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredCategories.map((category) => (
                       <CategoryCard
                         key={category.id}
@@ -1328,10 +1355,10 @@ export default function OrganizePage() {
                     </svg>
                   </div>
                   <h3 className="text-xl font-semibold text-gray-300 mb-2">No categories yet</h3>
-                  <p className="text-gray-500 mb-6">Create your first category to organize your snippets</p>
+                  <p className="text-gray-500 mb-6 text-sm md:text-base px-4">Create your first category to organize your snippets</p>
                   <button
                     onClick={() => setShowCreateCategory(true)}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 font-medium cursor-pointer"
+                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 font-medium cursor-pointer text-sm"
                   >
                     Create Your First Category
                   </button>
@@ -1372,8 +1399,8 @@ export default function OrganizePage() {
                     </button>
                   </div>
                   
-                  {/* Snippet Grid - 3 columns */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Snippet Grid - 4 columns */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {snippets.map((snippet) => (
                       <div
                         key={snippet.id}

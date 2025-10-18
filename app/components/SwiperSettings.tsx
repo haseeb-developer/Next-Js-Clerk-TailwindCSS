@@ -129,6 +129,96 @@ export function SwiperSettings() {
         </div>
       </motion.div>
 
+      {/* Safe Passwords Page Settings */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.3 }}
+        className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-200"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h4 className="text-lg font-medium text-white">Safe Passwords Folders</h4>
+            </div>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Enable swiper sliders for folders in the Safe Passwords page when there are more than 3 folders.
+            </p>
+            <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+              <span>Better organization</span>
+              <div className="w-2 h-2 bg-blue-400 rounded-full ml-3"></div>
+              <span>Improved navigation</span>
+            </div>
+          </div>
+          
+          <div className="ml-6">
+            <button
+              onClick={() => handleToggle('safePasswordsFoldersSwiper')}
+              className={`cursor-pointer relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
+                settings.safePasswordsFoldersSwiper ? 'bg-green-600' : 'bg-gray-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                  settings.safePasswordsFoldersSwiper ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Safe Passwords Categories Swiper Setting */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.3 }}
+        className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-200"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+              </div>
+              <h4 className="text-lg font-medium text-white">Safe Passwords Categories</h4>
+            </div>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Enable swiper slider for categories in the Safe Passwords page when there are more than 3 categories.
+            </p>
+            <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+              <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+              <span>Cleaner layout</span>
+              <div className="w-2 h-2 bg-purple-400 rounded-full ml-3"></div>
+              <span>Smooth scrolling</span>
+            </div>
+          </div>
+          
+          <div className="ml-6">
+            <button
+              onClick={() => handleToggle('safePasswordsCategoriesSwiper')}
+              className={`cursor-pointer relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
+                settings.safePasswordsCategoriesSwiper ? 'bg-orange-600' : 'bg-gray-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                  settings.safePasswordsCategoriesSwiper ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Preview */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -152,6 +242,17 @@ export function SwiperSettings() {
             : "Folders and categories will display in a traditional grid layout."
           }
         </p>
+        <div className="mt-3 pt-3 border-t border-gray-700/50">
+          <p className="text-gray-400 text-sm">
+            <strong>Safe Passwords Page:</strong> {
+              settings.safePasswordsFoldersSwiper && settings.safePasswordsCategoriesSwiper
+                ? "Both folders and categories will use swiper sliders."
+                : settings.safePasswordsFoldersSwiper || settings.safePasswordsCategoriesSwiper
+                ? `${settings.safePasswordsFoldersSwiper ? 'Folders' : 'Categories'} will use swiper sliders.`
+                : "Swiper sliders are disabled for Safe Passwords page."
+            }
+          </p>
+        </div>
       </motion.div>
 
     </motion.div>

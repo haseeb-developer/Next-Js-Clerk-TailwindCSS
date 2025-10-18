@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ProtectedLink } from './ProtectedLink'
 import { UnsavedChangesAlert } from './UnsavedChangesAlert'
 import { useNavigation } from '../contexts/NavigationContext'
+import ToolsDropdown from './ToolsDropdown'
 
 export default function ClerkWrapper({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false)
@@ -18,7 +19,7 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
     return (
       <div className="min-h-screen">
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">
-          <div className="max-w-7xl mx-auto" >
+          <div className="max-w-[1700px] mx-auto px-4 py-6">
             <div className="flex justify-between items-center h-20">
               <ProtectedLink 
                 href="/dashboard" 
@@ -130,7 +131,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen">
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-zinc-900/80 border-b border-zinc-800/50">
-          <div className="max-w-7xl mx-auto" style={{ padding: '0 20px' }}>
+          <div className="max-w-[1700px] mx-auto px-4 py-6">
             <div className="flex justify-between items-center h-16">
               <ProtectedLink 
                 href="/dashboard" 
@@ -162,8 +163,8 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
       afterSignUpUrl="/dashboard"
     >
       <div className="min-h-screen">
-        <header className="sticky top-0 z-50 pl-[20px] pr-[20px] backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">
-          <div className="max-w-7xl mx-auto">
+        <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">
+          <div className="max-w-[1700px] mx-auto px-4">
             <div className="flex justify-between items-center h-20">
               {/* Logo Section */}
               <ProtectedLink
@@ -243,56 +244,46 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                               <ProtectedLink 
                                 href="/dashboard"
                                 prefetch={true}
-                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
+                                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors duration-150 cursor-pointer ${
                                   isActive('/dashboard') 
                                     ? 'text-white bg-indigo-500/20 border border-indigo-500/30' 
                                     : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 } rounded-lg`}
                               >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+                                </svg>
                                 Dashboard
                               </ProtectedLink>
-                              <ProtectedLink 
-                                href="/snippets"
-                                prefetch={true}
-                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
-                                  isActive('/snippets') 
-                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30' 
-                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
-                                } rounded-lg`}
-                              >
-                                Snippets
-                              </ProtectedLink>
-                              <ProtectedLink 
-                                href="/organize"
-                                prefetch={true}
-                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
-                                  isActive('/organize') 
-                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30' 
-                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
-                                } rounded-lg`}
-                              >
-                                Organize
-                              </ProtectedLink>
+                              <ToolsDropdown isActive={isActive} />
                               <ProtectedLink 
                                 href="/user-settings"
                                 prefetch={true}
-                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
+                                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors duration-150 cursor-pointer ${
                                   isActive('/user-settings') 
                                     ? 'text-white bg-indigo-500/20 border border-indigo-500/30' 
                                     : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 } rounded-lg`}
                               >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
                                 Settings
                               </ProtectedLink>
                               <ProtectedLink 
                                 href="/credits"
                                 prefetch={true}
-                                className={`px-4 py-2 text-sm font-medium transition-colors duration-150 ${
+                                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors duration-150 cursor-pointer ${
                                   isActive('/credits') 
                                     ? 'text-white bg-indigo-500/20 border border-indigo-500/30' 
                                     : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 } rounded-lg`}
                               >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                </svg>
                                 Credits
                               </ProtectedLink>
                       {UserInfo && <UserInfo />}
@@ -330,7 +321,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Mobile Menu */}
-            <div className={`lg:hidden overflow-hidden transition-all duration-500 ease-in-out ${isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className={`lg:hidden overflow-hidden transition-all duration-500 ease-in-out ${isMobileMenuOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
               <div className="py-6 space-y-4 border-t border-zinc-700/30">
                 {isGuest ? (
                   <div className="space-y-4">
@@ -385,61 +376,52 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
                               <ProtectedLink 
                                 href="/dashboard"
                                 prefetch={true}
-                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
+                                className={`flex items-center gap-3 px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 cursor-pointer ${
                                   isActive('/dashboard')
                                     ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
                                     : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 }`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                               >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
+                                </svg>
                                 Dashboard
                               </ProtectedLink>
-                              <ProtectedLink 
-                                href="/snippets"
-                                prefetch={true}
-                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
-                                  isActive('/snippets')
-                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
-                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
-                                }`}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                              >
-                                Snippets
-                              </ProtectedLink>
-                              <ProtectedLink 
-                                href="/organize"
-                                prefetch={true}
-                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
-                                  isActive('/organize')
-                                    ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
-                                    : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
-                                }`}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                              >
-                                Organize
-                              </ProtectedLink>
+                              <ToolsDropdown 
+                                isActive={isActive} 
+                                onItemClick={() => setIsMobileMenuOpen(false)}
+                              />
                               <ProtectedLink 
                                 href="/user-settings"
                                 prefetch={true}
-                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
+                                className={`flex items-center gap-3 px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 cursor-pointer ${
                                   isActive('/user-settings')
                                     ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
                                     : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 }`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                               >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
                                 Settings
                               </ProtectedLink>
                               <ProtectedLink 
                                 href="/credits"
                                 prefetch={true}
-                                className={`block px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 ${
+                                className={`flex items-center gap-3 px-6 py-4 text-base font-medium rounded-xl transition-colors duration-150 cursor-pointer ${
                                   isActive('/credits')
                                     ? 'text-white bg-indigo-500/20 border border-indigo-500/30'
                                     : 'text-zinc-300 hover:text-white hover:bg-zinc-700/30'
                                 }`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                               >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                </svg>
                                 Credits
                               </ProtectedLink>
                       {UserInfo && (
@@ -454,7 +436,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="max-w-7xl mx-auto" style={{ padding: '0 20px' }}>
+        <main>
           {children}
         </main>
         

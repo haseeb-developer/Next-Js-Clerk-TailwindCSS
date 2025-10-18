@@ -937,7 +937,7 @@ function SnippetsUserContent({ useUser }: any) {
     return iconMap[iconName] || iconMap['other']
   }
 
-  // Get recent snippets (3 most recent), respecting folder and category context
+  // Get recent snippets (4 most recent), respecting folder and category context
           const recentSnippets = [...snippets]
             .filter(s => {
               const folderMatch = selectedFolderId ? s.folder_id === selectedFolderId : s.folder_id == null
@@ -945,7 +945,7 @@ function SnippetsUserContent({ useUser }: any) {
               return folderMatch && categoryMatch
             })
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .slice(0, 3)
+            .slice(0, 4)
 
           // Filter folders by search term
           const filteredFolders = folders.filter(folder => 
@@ -1231,7 +1231,7 @@ function SnippetsUserContent({ useUser }: any) {
                   </div>
 
                   {filteredFolders.length > 0 ? (
-                    <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {filteredFolders.map((folder) => {
                         const snippetCount = snippets.filter(s => s.folder_id === folder.id).length
                         return (
@@ -1383,7 +1383,7 @@ function SnippetsUserContent({ useUser }: any) {
                 )}
 
                 {filteredCategories.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredCategories.map((category) => (
                       <CategoryCard
                         key={category.id}
@@ -1461,10 +1461,11 @@ function SnippetsUserContent({ useUser }: any) {
 
               <div className={`transition-all duration-300 overflow-hidden ${showRecentSnippets ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div className="p-6">
-                  <div className={`grid gap-6 ${
+                  <div className={`grid gap-4 ${
                     recentSnippets.length === 1 ? 'grid-cols-1' :
                     recentSnippets.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                    recentSnippets.length === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
+                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                   }`}>
                     <AnimatePresence>
                       {recentSnippets.map((snippet) => (
@@ -1653,13 +1654,13 @@ function SnippetsUserContent({ useUser }: any) {
                           </div>
                         </motion.div>
                       </div>
-                      <div className="flex gap-3">
+                      <div className="flex flex-wrap gap-3">
                         {/* Language Filter */}
-                        <div className="relative">
+                        <div className="relative flex-1 min-w-[200px] sm:min-w-[192px]">
                           <select
                             value={selectedLanguage}
                             onChange={(e) => setSelectedLanguage(e.target.value)}
-                            className="w-48 px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
+                            className="w-full px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
                           >
                             <option value="">All Languages</option>
                             {PROGRAMMING_LANGUAGES.map(lang => (
@@ -1674,11 +1675,11 @@ function SnippetsUserContent({ useUser }: any) {
                         </div>
                         
                         {/* Favorites Filter */}
-                        <div className="relative">
+                        <div className="relative flex-1 min-w-[160px] sm:min-w-[160px]">
                           <select
                             value={showFavoritesOnly ? 'favorites' : 'all'}
                             onChange={(e) => setShowFavoritesOnly(e.target.value === 'favorites')}
-                            className="w-40 px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
+                            className="w-full px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
                           >
                             <option value="all">All Snippets</option>
                             <option value="favorites">⭐ Favorites</option>
@@ -1691,11 +1692,11 @@ function SnippetsUserContent({ useUser }: any) {
                         </div>
                         
                         {/* Sort Filter */}
-                        <div className="relative">
+                        <div className="relative flex-1 min-w-[160px] sm:min-w-[160px]">
                           <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            className="w-40 px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
+                            className="w-full px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
                           >
                             <option value="newest">Newest First</option>
                             <option value="oldest">Oldest First</option>
@@ -1715,7 +1716,7 @@ function SnippetsUserContent({ useUser }: any) {
 
 
                 {filteredSnippets.length > 0 ? (
-                  <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredSnippets.map((snippet) => {
             const createdDate = new Date(snippet.created_at)
             const updatedDate = new Date(snippet.updated_at)

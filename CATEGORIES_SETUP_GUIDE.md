@@ -213,7 +213,7 @@ const newColors = [
 ```typescript
 const newIcons = {
   'blockchain': (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-6 h-6 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       {/* Your icon SVG */}
     </svg>
   )

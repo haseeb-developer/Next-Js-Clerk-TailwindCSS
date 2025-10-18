@@ -5,11 +5,15 @@ import { useState, useEffect } from 'react'
 interface SwiperSettings {
   foldersSwiper: boolean
   categoriesSwiper: boolean
+  safePasswordsFoldersSwiper: boolean
+  safePasswordsCategoriesSwiper: boolean
 }
 
 const defaultSettings: SwiperSettings = {
   foldersSwiper: false,
-  categoriesSwiper: false
+  categoriesSwiper: false,
+  safePasswordsFoldersSwiper: false,
+  safePasswordsCategoriesSwiper: false
 }
 
 export function useSwiperSettings() {
