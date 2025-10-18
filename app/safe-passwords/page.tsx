@@ -2374,13 +2374,6 @@ export default function SafePasswordsPage() {
                         target.style.height = Math.min(target.scrollHeight, 120) + 'px'
                       }}
                     />
-                    <button
-                      type="button"
-                      onClick={generatePassword}
-                      className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:scale-105 transition-all duration-200 border-0 outline-none"
-                    >
-                      Generate
-                    </button>
                   </div>
                 </div>
 
