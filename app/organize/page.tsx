@@ -582,18 +582,21 @@ export default function OrganizePage() {
 
   const handleDeleteSnippet = async (snippet: Snippet) => {
     try {
-      const { error } = await supabase
-        .from('snippets')
-        .delete()
-        .eq('id', snippet.id)
+      // Use soft delete API endpoint to move to recycle bin
+      const response = await fetch(`/api/snippets/${snippet.id}/soft-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error('Failed to delete snippet')
+      }
 
       // Update local state
       setSnippets(prev => prev.filter(s => s.id !== snippet.id))
 
       addToast({
-        message: 'Snippet deleted successfully',
+        message: 'Snippet moved to recycle bin',
         type: 'success'
       })
 
