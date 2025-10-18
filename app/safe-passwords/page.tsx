@@ -217,6 +217,17 @@ export default function SafePasswordsPage() {
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: 'success' | 'error' | 'info' }>>([])
   const [isLoading, setIsLoading] = useState(true)
   const [dbConnectionError, setDbConnectionError] = useState(false)
+  const [showPasswordGenerator, setShowPasswordGenerator] = useState(false)
+  const [generatedPassword, setGeneratedPassword] = useState('')
+  const [passwordLength, setPasswordLength] = useState(12)
+  const [includeUppercase, setIncludeUppercase] = useState(true)
+  const [includeLowercase, setIncludeLowercase] = useState(true)
+  const [includeNumbers, setIncludeNumbers] = useState(true)
+  const [includeSymbols, setIncludeSymbols] = useState(true)
+  const [excludeSimilar, setExcludeSimilar] = useState(false)
+  const [excludeAmbiguous, setExcludeAmbiguous] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [shuffleCount, setShuffleCount] = useState(0)
   const [passwordForm, setPasswordForm] = useState({
     title: '',
     username: '',
@@ -361,6 +372,103 @@ export default function SafePasswordsPage() {
       // Don't show error screen, just retry silently
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Password Generator Functions
+  const generatePassword = async () => {
+    setIsGenerating(true)
+    
+    // Add a small delay for smooth animation
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    let charset = ''
+    
+    if (includeUppercase) charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    if (includeLowercase) charset += 'abcdefghijklmnopqrstuvwxyz'
+    if (includeNumbers) charset += '0123456789'
+    if (includeSymbols) charset += '!@#$%^&*()_+-=[]{}|;:,.<>?'
+    
+    if (excludeSimilar) {
+      charset = charset.replace(/[il1Lo0O]/g, '')
+    }
+    
+    if (excludeAmbiguous) {
+      charset = charset.replace(/[{}[\]\\|;:,.<>?]/g, '')
+    }
+    
+    if (charset.length === 0) {
+      addToast({ message: 'Please select at least one character type', type: 'error' })
+      setIsGenerating(false)
+      return
+    }
+    
+    let password = ''
+    for (let i = 0; i < passwordLength; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length))
+    }
+    
+    setGeneratedPassword(password)
+    setShuffleCount(0)
+    setIsGenerating(false)
+  }
+
+  const shufflePassword = () => {
+    if (!generatedPassword) return
+    
+    const passwordArray = generatedPassword.split('')
+    for (let i = passwordArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]]
+    }
+    
+    setGeneratedPassword(passwordArray.join(''))
+    setShuffleCount(prev => prev + 1)
+  }
+
+  const getPasswordStrength = (password: string) => {
+    let score = 0
+    const feedback = []
+    
+    if (password.length >= 8) score += 1
+    else feedback.push('Use at least 8 characters')
+    
+    if (password.length >= 12) score += 1
+    if (password.length >= 16) score += 1
+    
+    if (/[a-z]/.test(password)) score += 1
+    else feedback.push('Add lowercase letters')
+    
+    if (/[A-Z]/.test(password)) score += 1
+    else feedback.push('Add uppercase letters')
+    
+    if (/[0-9]/.test(password)) score += 1
+    else feedback.push('Add numbers')
+    
+    if (/[^A-Za-z0-9]/.test(password)) score += 1
+    else feedback.push('Add special characters')
+    
+    if (password.length > 20) score += 1
+    
+    const strengthLevels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong']
+    const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500', 'bg-emerald-500']
+    
+    return {
+      score: Math.min(score, 5),
+      level: strengthLevels[Math.min(score, 5)],
+      color: colors[Math.min(score, 5)],
+      feedback: feedback
+    }
+  }
+
+  const copyGeneratedPassword = async () => {
+    if (!generatedPassword) return
+    
+    try {
+      await navigator.clipboard.writeText(generatedPassword)
+      addToast({ message: 'Password copied to clipboard!', type: 'success' })
+    } catch (error) {
+      addToast({ message: 'Failed to copy password', type: 'error' })
     }
   }
 
@@ -789,15 +897,6 @@ export default function SafePasswordsPage() {
     }
   }
 
-  const generatePassword = () => {
-    const length = 16
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
-    let password = ''
-    for (let i = 0; i < length; i++) {
-      password += charset.charAt(Math.floor(Math.random() * charset.length))
-    }
-    setPasswordForm({ ...passwordForm, password })
-  }
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -895,7 +994,27 @@ export default function SafePasswordsPage() {
 
 
   return (
-    <div className={`min-h-screen bg-[#0F172A] ${(showFolderPopup || showCategoryPopup) ? 'backdrop-blur-sm' : ''}`}>
+    <>
+      <style jsx>{`
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #8b5cf6;
+          cursor: pointer;
+          border: 2px solid #1f2937;
+        }
+        .slider::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #8b5cf6;
+          cursor: pointer;
+          border: 2px solid #1f2937;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#0F172A] ${(showFolderPopup || showCategoryPopup) ? 'backdrop-blur-sm' : ''}`}>
       {/* Header */}
       <div className="max-w-[1700px] mx-auto px-4 pt-6">
         <div className="mb-8">
@@ -925,6 +1044,15 @@ export default function SafePasswordsPage() {
                 className="w-full pl-10 pr-4 py-2 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-400/50"
               />
             </div>
+            <button
+              onClick={() => setShowPasswordGenerator(true)}
+              className="px-6 cursor-pointer py-2 bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg hover:from-purple-600 hover:to-violet-700 transition-all duration-200 font-medium flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Generate Password
+            </button>
             <button
               onClick={() => setShowCreatePassword(true)}
               className="px-6 cursor-pointer py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-medium flex items-center gap-2"
@@ -2998,7 +3126,7 @@ export default function SafePasswordsPage() {
       </AnimatePresence>
 
       {/* Toast Container - Fixed to viewport */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
+      <div className="fixed top-4 right-4 z-[60] space-y-2">
         {toasts.map((toast) => (
           <motion.div
             key={toast.id}
@@ -3041,6 +3169,409 @@ export default function SafePasswordsPage() {
           </motion.div>
         ))}
       </div>
-    </div>
+
+      {/* Password Generator Modal */}
+      <AnimatePresence>
+        {showPasswordGenerator && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-[calc(100vw-40px)] h-[calc(100vh-40px)] bg-gray-900 rounded-2xl border border-gray-700/50 shadow-2xl overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-700/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">Password Generator</h2>
+                    <p className="text-gray-400 text-sm">Create secure passwords with custom options</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPasswordGenerator(false)}
+                  className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200"
+                >
+                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 h-full overflow-y-auto">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 h-full">
+                  {/* Left Column - Generated Password */}
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-3">Generated Password</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={generatedPassword}
+                          readOnly
+                          className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white font-mono text-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-400/50"
+                          placeholder="Click 'Generate Password' to create one"
+                        />
+                        {generatedPassword && (
+                          <button
+                            onClick={copyGeneratedPassword}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200"
+                          >
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Password Strength */}
+                    {generatedPassword && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-3">Password Strength</label>
+                        {(() => {
+                          const strength = getPasswordStrength(generatedPassword)
+                          return (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-3">
+                                <div className="flex-1 bg-gray-700 rounded-full h-2">
+                                  <div 
+                                    className={`h-2 rounded-full transition-all duration-300 ${strength.color}`}
+                                    style={{ width: `${(strength.score + 1) * 16.67}%` }}
+                                  />
+                                </div>
+                                <span className={`text-sm font-medium ${strength.color.replace('bg-', 'text-')}`}>
+                                  {strength.level}
+                                </span>
+                              </div>
+                              {strength.feedback.length > 0 && (
+                                <div className="text-xs text-gray-400">
+                                  <p>Suggestions: {strength.feedback.join(', ')}</p>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="space-y-3">
+                      <button
+                        onClick={generatePassword}
+                        disabled={isGenerating}
+                        className={`w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white rounded-lg transition-all duration-200 font-medium flex items-center justify-center gap-2 ${
+                          isGenerating ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Generate New Password
+                          </>
+                        )}
+                      </button>
+                      
+                      {generatedPassword && (
+                        <button
+                          onClick={shufflePassword}
+                          className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-lg transition-all duration-200 font-medium flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Shuffle Password {shuffleCount > 0 && `(${shuffleCount})`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Middle Column - Character Options */}
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-3">Password Length: {passwordLength}</label>
+                      <input
+                        type="range"
+                        min="4"
+                        max="64"
+                        value={passwordLength}
+                        onChange={(e) => setPasswordLength(parseInt(e.target.value))}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                      <div className="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>4</span>
+                        <span>64</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium text-white">Character Types</h3>
+                      
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            checked={includeUppercase}
+                            onChange={(e) => setIncludeUppercase(e.target.checked)}
+                            className="sr-only"
+                          />
+                          <div className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
+                            includeUppercase 
+                              ? 'bg-purple-600 border-purple-600' 
+                              : 'bg-gray-700 border-gray-600 group-hover:border-purple-500'
+                          }`}>
+                            {includeUppercase && (
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-gray-300 group-hover:text-white transition-colors">Uppercase Letters (A-Z)</span>
+                      </label>
+
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            checked={includeLowercase}
+                            onChange={(e) => setIncludeLowercase(e.target.checked)}
+                            className="sr-only"
+                          />
+                          <div className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
+                            includeLowercase 
+                              ? 'bg-purple-600 border-purple-600' 
+                              : 'bg-gray-700 border-gray-600 group-hover:border-purple-500'
+                          }`}>
+                            {includeLowercase && (
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-gray-300 group-hover:text-white transition-colors">Lowercase Letters (a-z)</span>
+                      </label>
+
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            checked={includeNumbers}
+                            onChange={(e) => setIncludeNumbers(e.target.checked)}
+                            className="sr-only"
+                          />
+                          <div className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
+                            includeNumbers 
+                              ? 'bg-purple-600 border-purple-600' 
+                              : 'bg-gray-700 border-gray-600 group-hover:border-purple-500'
+                          }`}>
+                            {includeNumbers && (
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-gray-300 group-hover:text-white transition-colors">Numbers (0-9)</span>
+                      </label>
+
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            checked={includeSymbols}
+                            onChange={(e) => setIncludeSymbols(e.target.checked)}
+                            className="sr-only"
+                          />
+                          <div className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
+                            includeSymbols 
+                              ? 'bg-purple-600 border-purple-600' 
+                              : 'bg-gray-700 border-gray-600 group-hover:border-purple-500'
+                          }`}>
+                            {includeSymbols && (
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-gray-300 group-hover:text-white transition-colors">Special Characters (!@#$%^&*)</span>
+                      </label>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium text-white">Exclude Characters</h3>
+                      
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            checked={excludeSimilar}
+                            onChange={(e) => setExcludeSimilar(e.target.checked)}
+                            className="sr-only"
+                          />
+                          <div className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
+                            excludeSimilar 
+                              ? 'bg-orange-600 border-orange-600' 
+                              : 'bg-gray-700 border-gray-600 group-hover:border-orange-500'
+                          }`}>
+                            {excludeSimilar && (
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-gray-300 group-hover:text-white transition-colors">Exclude Similar Characters (il1Lo0O)</span>
+                      </label>
+
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            checked={excludeAmbiguous}
+                            onChange={(e) => setExcludeAmbiguous(e.target.checked)}
+                            className="sr-only"
+                          />
+                          <div className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
+                            excludeAmbiguous 
+                              ? 'bg-orange-600 border-orange-600' 
+                              : 'bg-gray-700 border-gray-600 group-hover:border-orange-500'
+                          }`}>
+                            {excludeAmbiguous && (
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-gray-300 group-hover:text-white transition-colors">Exclude Ambiguous Characters (&#123;&#91;&#93;&#92;&#124;&#59;&#58;&#44;&#46;&#60;&#62;&#63;&#125;)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Right Column - Additional Features */}
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium text-white mb-4">Password Statistics</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
+                          <span className="text-gray-300">Length</span>
+                          <span className="text-white font-mono">{generatedPassword.length || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
+                          <span className="text-gray-300">Uppercase</span>
+                          <span className="text-white font-mono">
+                            {generatedPassword ? (generatedPassword.match(/[A-Z]/g) || []).length : 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
+                          <span className="text-gray-300">Lowercase</span>
+                          <span className="text-white font-mono">
+                            {generatedPassword ? (generatedPassword.match(/[a-z]/g) || []).length : 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
+                          <span className="text-gray-300">Numbers</span>
+                          <span className="text-white font-mono">
+                            {generatedPassword ? (generatedPassword.match(/[0-9]/g) || []).length : 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
+                          <span className="text-gray-300">Symbols</span>
+                          <span className="text-white font-mono">
+                            {generatedPassword ? (generatedPassword.match(/[^A-Za-z0-9]/g) || []).length : 0}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-medium text-white mb-4">Quick Actions</h3>
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => {
+                            setPasswordLength(8)
+                            setIncludeUppercase(true)
+                            setIncludeLowercase(true)
+                            setIncludeNumbers(true)
+                            setIncludeSymbols(true)
+                            setExcludeSimilar(false)
+                            setExcludeAmbiguous(false)
+                          }}
+                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm"
+                        >
+                          Reset to Default
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPasswordLength(16)
+                            setIncludeUppercase(true)
+                            setIncludeLowercase(true)
+                            setIncludeNumbers(true)
+                            setIncludeSymbols(true)
+                            setExcludeSimilar(true)
+                            setExcludeAmbiguous(false)
+                          }}
+                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm"
+                        >
+                          Strong Password
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPasswordLength(32)
+                            setIncludeUppercase(true)
+                            setIncludeLowercase(true)
+                            setIncludeNumbers(true)
+                            setIncludeSymbols(true)
+                            setExcludeSimilar(false)
+                            setExcludeAmbiguous(false)
+                          }}
+                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm"
+                        >
+                          Extra Long
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-medium text-white mb-4">Password History</h3>
+                      <div className="text-center text-gray-400 text-sm">
+                        <p>Generated: {shuffleCount > 0 ? shuffleCount + 1 : (generatedPassword ? 1 : 0)} times</p>
+                        {generatedPassword && (
+                          <p className="mt-2 text-xs">Last generated: {new Date().toLocaleTimeString()}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </div>
+    </>
   )
 }
