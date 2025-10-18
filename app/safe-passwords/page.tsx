@@ -326,26 +326,29 @@ export default function SafePasswordsPage() {
         return
       }
       
-      // Load all passwords (including deleted ones)
+      // Load all passwords (including deleted ones) for this user only
       const { data: allPasswordsData } = await supabase
         .from('passwords')
         .select('*')
+        .eq('user_id', user?.id) // Only get passwords for this user
         .order('created_at', { ascending: false })
 
       // Separate active and deleted passwords
       const activePasswords = (allPasswordsData || []).filter((p: Password) => !p.is_deleted)
       const deletedPasswords = (allPasswordsData || []).filter((p: Password) => p.is_deleted)
 
-      // Load folders
+      // Load folders for this user only
       const { data: foldersData } = await supabase
         .from('password_folders')
         .select('*')
+        .eq('user_id', user?.id) // Only get folders for this user
         .order('created_at', { ascending: false })
 
-      // Load categories
+      // Load categories for this user only
       const { data: categoriesData } = await supabase
         .from('password_categories')
         .select('*')
+        .eq('user_id', user?.id) // Only get categories for this user
         .order('created_at', { ascending: false })
 
       setPasswords(activePasswords)
@@ -454,7 +457,8 @@ export default function SafePasswordsPage() {
         .insert([{
           ...passwordForm,
           folder_id: passwordForm.folder_id || null,
-          category_id: passwordForm.category_id || null
+          category_id: passwordForm.category_id || null,
+          user_id: user?.id // Add user isolation
         }])
         .select()
 
@@ -500,9 +504,11 @@ export default function SafePasswordsPage() {
           ...passwordForm,
           folder_id: passwordForm.folder_id || null,
           category_id: passwordForm.category_id || null,
+          user_id: user?.id, // Add user isolation
           updated_at: new Date().toISOString()
         })
         .eq('id', editingPassword.id)
+        .eq('user_id', user?.id) // Ensure user can only update their own passwords
 
       if (error) throw error
       
@@ -554,6 +560,7 @@ export default function SafePasswordsPage() {
         .from('passwords')
         .update({ is_deleted: true, deleted_at: new Date().toISOString() })
         .eq('id', id)
+        .eq('user_id', user?.id) // Ensure user can only delete their own passwords
 
       if (error) throw error
       
@@ -635,6 +642,7 @@ export default function SafePasswordsPage() {
         .from('passwords')
         .update({ is_deleted: false, deleted_at: null })
         .eq('id', passwordId)
+        .eq('user_id', user?.id) // Ensure user can only restore their own passwords
 
       if (error) throw error
 
@@ -663,6 +671,7 @@ export default function SafePasswordsPage() {
         .from('passwords')
         .delete()
         .eq('id', passwordId)
+        .eq('user_id', user?.id) // Ensure user can only permanently delete their own passwords
 
       if (error) throw error
 
@@ -686,6 +695,7 @@ export default function SafePasswordsPage() {
         .from('passwords')
         .delete()
         .eq('is_deleted', true)
+        .eq('user_id', user?.id) // Ensure user can only clear their own deleted passwords
 
       if (error) throw error
 
@@ -737,7 +747,10 @@ export default function SafePasswordsPage() {
       
       const { data, error } = await supabase
         .from('password_folders')
-        .insert([folderForm])
+        .insert([{
+          ...folderForm,
+          user_id: user?.id // Add user isolation
+        }])
         .select()
 
       if (error) throw error
@@ -761,7 +774,10 @@ export default function SafePasswordsPage() {
       
       const { data, error } = await supabase
         .from('password_categories')
-        .insert([categoryForm])
+        .insert([{
+          ...categoryForm,
+          user_id: user?.id // Add user isolation
+        }])
         .select()
 
       if (error) throw error
