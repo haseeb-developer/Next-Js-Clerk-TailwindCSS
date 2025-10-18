@@ -3200,7 +3200,7 @@ export default function SafePasswordsPage() {
                 </div>
                 <button
                   onClick={() => setShowPasswordGenerator(false)}
-                  className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200"
+                  className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200 cursor-pointer"
                 >
                   <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -3226,7 +3226,7 @@ export default function SafePasswordsPage() {
                         {generatedPassword && (
                           <button
                             onClick={copyGeneratedPassword}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200"
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200 cursor-pointer"
                           >
                             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -3272,7 +3272,7 @@ export default function SafePasswordsPage() {
                         onClick={generatePassword}
                         disabled={isGenerating}
                         className={`w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white rounded-lg transition-all duration-200 font-medium flex items-center justify-center gap-2 ${
-                          isGenerating ? 'opacity-50 cursor-not-allowed' : ''
+                          isGenerating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                         }`}
                       >
                         {isGenerating ? (
@@ -3295,7 +3295,7 @@ export default function SafePasswordsPage() {
                       {generatedPassword && (
                         <button
                           onClick={shufflePassword}
-                          className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-lg transition-all duration-200 font-medium flex items-center justify-center gap-2"
+                          className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-lg transition-all duration-200 font-medium flex items-center justify-center gap-2 cursor-pointer"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -3520,7 +3520,7 @@ export default function SafePasswordsPage() {
                             setExcludeSimilar(false)
                             setExcludeAmbiguous(false)
                           }}
-                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm"
+                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm cursor-pointer"
                         >
                           Reset to Default
                         </button>
@@ -3534,7 +3534,7 @@ export default function SafePasswordsPage() {
                             setExcludeSimilar(true)
                             setExcludeAmbiguous(false)
                           }}
-                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm"
+                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm cursor-pointer"
                         >
                           Strong Password
                         </button>
@@ -3548,7 +3548,7 @@ export default function SafePasswordsPage() {
                             setExcludeSimilar(false)
                             setExcludeAmbiguous(false)
                           }}
-                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm"
+                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200 text-sm cursor-pointer"
                         >
                           Extra Long
                         </button>
