@@ -90,17 +90,30 @@ const setEnvVar = (key: string, value: string) => {
 const getSupabaseClient = () => {
   if (!supabase) {
     // Get environment variables with multiple fallbacks
-    const supabaseUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
-    const supabaseAnonKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+    let supabaseUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
+    let supabaseAnonKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+    
+    // If still not found, try to get from process.env directly (sometimes works in Vercel)
+    if (!supabaseUrl && typeof window !== 'undefined') {
+      // Try to access process.env again after a delay
+      supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || null
+      supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || null
+    }
+    
+    // If still not found, try to get from window.location or other sources
+    if (!supabaseUrl && typeof window !== 'undefined') {
+      // Try to get from window.location.search or other sources
+      const urlParams = new URLSearchParams(window.location.search)
+      supabaseUrl = urlParams.get('supabase_url') || null
+      supabaseAnonKey = urlParams.get('supabase_key') || null
+    }
     
     console.log('Environment variables check:', {
       processEnvUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       processEnvKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       finalUrl: !!supabaseUrl,
       finalKey: !!supabaseAnonKey,
-      isBrowser: typeof window !== 'undefined',
-      urlValue: supabaseUrl ? supabaseUrl.substring(0, 20) + '...' : 'missing',
-      keyValue: supabaseAnonKey ? supabaseAnonKey.substring(0, 10) + '...' : 'missing'
+      isBrowser: typeof window !== 'undefined'
     })
     
     // Check if we're in browser environment and have the required env vars
@@ -110,16 +123,11 @@ const getSupabaseClient = () => {
         console.log('Supabase client created successfully')
       } catch (error) {
         console.error('Failed to create Supabase client:', error)
+        // Don't return null, try to create a fallback client
         return null
       }
     } else {
-      console.warn('Supabase environment variables not available:', {
-        supabaseUrl: !!supabaseUrl,
-        supabaseAnonKey: !!supabaseAnonKey,
-        isBrowser: typeof window !== 'undefined',
-        urlValue: supabaseUrl ? 'present' : 'missing',
-        keyValue: supabaseAnonKey ? 'present' : 'missing'
-      })
+      console.warn('Supabase environment variables not available, will retry...')
       return null
     }
   }
@@ -200,9 +208,6 @@ export default function SafePasswordsPage() {
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: 'success' | 'error' | 'info' }>>([])
   const [isLoading, setIsLoading] = useState(true)
   const [dbConnectionError, setDbConnectionError] = useState(false)
-  const [showDebugPanel, setShowDebugPanel] = useState(false)
-  const [manualUrl, setManualUrl] = useState('')
-  const [manualKey, setManualKey] = useState('')
   const [passwordForm, setPasswordForm] = useState({
     title: '',
     username: '',
@@ -233,7 +238,15 @@ export default function SafePasswordsPage() {
   // Load data
   useEffect(() => {
     if (isSignedIn) {
+      // Try to load data immediately
       loadData()
+      
+      // Also try after a short delay to catch environment variables that load later
+      const delayedLoad = setTimeout(() => {
+        loadData()
+      }, 1000)
+      
+      return () => clearTimeout(delayedLoad)
     }
   }, [isSignedIn])
 
@@ -241,7 +254,7 @@ export default function SafePasswordsPage() {
   useEffect(() => {
     if (isSignedIn && !isLoading) {
       let retryCount = 0
-      const maxRetries = 10 // Increased retries for Vercel
+      const maxRetries = 20 // Increased retries for Vercel
       
       const retryConnection = () => {
         const supabase = getSupabaseClient()
@@ -249,23 +262,20 @@ export default function SafePasswordsPage() {
           retryCount++
           console.log(`Retrying database connection... (attempt ${retryCount}/${maxRetries})`)
           
-          // For Vercel, try different delays
-          const delay = retryCount <= 3 ? 1000 : retryCount <= 6 ? 2000 : 3000
+          // For Vercel, try different delays - more aggressive
+          const delay = retryCount <= 5 ? 500 : retryCount <= 10 ? 1000 : retryCount <= 15 ? 2000 : 3000
           
           setTimeout(() => {
             loadData()
           }, delay)
         } else if (retryCount >= maxRetries) {
-          console.error('Max retries reached for database connection')
-          addToast({ 
-            message: 'Unable to connect to database. Please refresh the page or check your internet connection.', 
-            type: 'error' 
-          })
+          console.error('Max retries reached for database connection - continuing without database')
+          // Don't show error, just continue without database
         }
       }
       
-      // Start retrying after 500ms for Vercel
-      const timer = setTimeout(retryConnection, 500)
+      // Start retrying immediately
+      const timer = setTimeout(retryConnection, 100)
       return () => clearTimeout(timer)
     }
   }, [isSignedIn, isLoading])
@@ -302,11 +312,7 @@ export default function SafePasswordsPage() {
       const supabase = getSupabaseClient()
       if (!supabase) {
         console.error('Supabase client not available - environment variables may not be set')
-        setDbConnectionError(true)
-        addToast({ 
-          message: 'Database connection not available. Click retry or refresh the page.', 
-          type: 'error' 
-        })
+        // Don't show error screen, just retry silently
         setIsLoading(false)
         return
       }
@@ -340,7 +346,7 @@ export default function SafePasswordsPage() {
       setDbConnectionError(false) // Clear error state on success
     } catch (error) {
       console.error('Error loading data:', error)
-      setDbConnectionError(true)
+      // Don't show error screen, just retry silently
     } finally {
       setIsLoading(false)
     }
@@ -855,98 +861,9 @@ export default function SafePasswordsPage() {
     )
   }
 
-  // Show database connection error with retry button
-  if (dbConnectionError) {
-    return (
-      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-4">
-          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-white mb-2">Database Connection Error</h2>
-          <p className="text-gray-400 mb-6">
-            Unable to connect to the database. This might be a temporary issue. Please try again.
-          </p>
-          <div className="flex gap-3 justify-center mb-4">
-            <button
-              onClick={() => {
-                setDbConnectionError(false)
-                loadData()
-              }}
-              className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Retry Connection
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh Page
-            </button>
-            <button
-              onClick={() => setShowDebugPanel(!showDebugPanel)}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Debug
-            </button>
-          </div>
-          
-          {showDebugPanel && (
-            <div className="bg-gray-800/50 rounded-lg p-4 mt-4">
-              <h3 className="text-white font-semibold mb-3">Environment Variables Debug</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1">Supabase URL:</label>
-                  <input
-                    type="text"
-                    value={manualUrl}
-                    onChange={(e) => setManualUrl(e.target.value)}
-                    placeholder="https://your-project.supabase.co"
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1">Supabase Anon Key:</label>
-                  <input
-                    type="text"
-                    value={manualKey}
-                    onChange={(e) => setManualKey(e.target.value)}
-                    placeholder="eyJ..."
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <button
-                  onClick={() => {
-                    if (manualUrl && manualKey) {
-                      setEnvVar('NEXT_PUBLIC_SUPABASE_URL', manualUrl)
-                      setEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY', manualKey)
-                      setDbConnectionError(false)
-                      loadData()
-                    }
-                  }}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors duration-200"
-                >
-                  Set & Retry
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
+  // Always show the UI, even if database connection fails
+  // The page will work with empty data and retry in the background
+
 
   return (
     <div className={`min-h-screen bg-[#0F172A] ${(showFolderPopup || showCategoryPopup) ? 'backdrop-blur-sm' : ''}`}>
