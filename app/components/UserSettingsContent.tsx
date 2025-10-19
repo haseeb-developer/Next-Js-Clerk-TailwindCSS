@@ -318,8 +318,19 @@ export default function UserSettingsContent() {
   const [clerkLoadError, setClerkLoadError] = useState(false)
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null)
   const [timeInfo, setTimeInfo] = useState<TimeInfo | null>(null)
+  const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
+    // Add global error handler for this component
+    const handleError = (error: ErrorEvent) => {
+      console.error('Global error in UserSettingsContent:', error);
+      if (error.message.includes('m is not a function') || error.message.includes('TypeError')) {
+        setHasError(true);
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    
     setIsClient(true)
     
     // Detect device information
@@ -389,14 +400,23 @@ export default function UserSettingsContent() {
       setTimeInfo(getTimeInfo())
     }, 1000)
 
-    // Load Clerk components with timeout
+    // Load Clerk components with better error handling
     const loadClerkComponents = async () => {
       try {
+        // Add a small delay to ensure DOM is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         const clerk = await import('@clerk/nextjs');
-        setClerkComponents({
-          UserProfile: clerk.UserProfile,
-          UserButton: clerk.UserButton,
-        });
+        
+        // Verify components exist before setting
+        if (clerk.UserProfile && clerk.UserButton) {
+          setClerkComponents({
+            UserProfile: clerk.UserProfile,
+            UserButton: clerk.UserButton,
+          });
+        } else {
+          throw new Error('Clerk components not available');
+        }
       } catch (error) {
         console.error('Failed to load Clerk components:', error);
         setClerkLoadError(true);
@@ -409,14 +429,15 @@ export default function UserSettingsContent() {
         console.error('Clerk components failed to load within timeout');
         setClerkLoadError(true);
       }
-    }, 10000); // 10 second timeout
+    }, 5000); // Reduced timeout to 5 seconds
 
     loadClerkComponents();
 
-    // Cleanup interval and timeout on unmount
+    // Cleanup interval, timeout, and event listener on unmount
     return () => {
       clearInterval(timeInterval);
       clearTimeout(clerkTimeout);
+      window.removeEventListener('error', handleError);
     }
   }, [])
 
@@ -481,11 +502,47 @@ export default function UserSettingsContent() {
   }
 
 
-      return <UserSettingsDisplay 
-        {...clerkComponents} 
-        deviceInfo={deviceInfo} 
-        timeInfo={timeInfo}
-      />
+  // Add error boundary for the main component
+  if (hasError) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+        <div className="w-full max-w-[1800px] mx-auto mx-5">
+          <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-white mb-2">Settings Error</h2>
+              <p className="text-zinc-400 mb-4">An error occurred while loading settings. Please try again.</p>
+              <button 
+                onClick={() => {
+                  setHasError(false);
+                  window.location.reload();
+                }} 
+                className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  try {
+    return <UserSettingsDisplay 
+      {...clerkComponents} 
+      deviceInfo={deviceInfo} 
+      timeInfo={timeInfo}
+    />
+  } catch (error) {
+    console.error('Error rendering UserSettingsDisplay:', error);
+    setHasError(true);
+    return null;
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
