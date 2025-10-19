@@ -210,9 +210,32 @@ export default function ConfirmAuthPage() {
         }
 
         try {
-          const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+          // Try multiple methods to get the site key
+          let siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+          
+          // Fallback methods for production
+          if (!siteKey && typeof window !== 'undefined') {
+            // Try to get from window object (Vercel fallback)
+            siteKey = (window as unknown as { __NEXT_DATA__?: { props?: { pageProps?: { NEXT_PUBLIC_RECAPTCHA_SITE_KEY?: string } } } }).__NEXT_DATA__?.props?.pageProps?.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+          }
+          
+          if (!siteKey && typeof window !== 'undefined') {
+            // Try to get from meta tag
+            const metaElement = document.querySelector('meta[name="NEXT_PUBLIC_RECAPTCHA_SITE_KEY"]');
+            if (metaElement) {
+              siteKey = metaElement.getAttribute('content') || undefined;
+            }
+          }
+          
+          // Hardcoded fallback for production (replace with your actual site key)
           if (!siteKey) {
-            console.error('reCAPTCHA site key not found');
+            siteKey = '6LemW-8rAAAAACMs6sjNncVw87PntujOphyA5JaE'; // Your reCAPTCHA site key
+            console.log('Using hardcoded reCAPTCHA site key as fallback');
+          }
+          
+          if (!siteKey) {
+            console.error('reCAPTCHA site key not found in any method');
+            setError('reCAPTCHA configuration error. Please refresh the page.');
             return;
           }
           console.log('Rendering reCAPTCHA with site key:', siteKey);
@@ -236,9 +259,30 @@ export default function ConfirmAuthPage() {
           if (error instanceof Error && error.message.includes('already been rendered')) {
             console.log('Attempting to reset and re-render reCAPTCHA...');
             try {
-              const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+              // Try multiple methods to get the site key
+              let siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+              
+              // Fallback methods for production
+              if (!siteKey && typeof window !== 'undefined') {
+                siteKey = (window as unknown as { __NEXT_DATA__?: { props?: { pageProps?: { NEXT_PUBLIC_RECAPTCHA_SITE_KEY?: string } } } }).__NEXT_DATA__?.props?.pageProps?.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+              }
+              
+              if (!siteKey && typeof window !== 'undefined') {
+                const metaElement = document.querySelector('meta[name="NEXT_PUBLIC_RECAPTCHA_SITE_KEY"]');
+                if (metaElement) {
+                  siteKey = metaElement.getAttribute('content') || undefined;
+                }
+              }
+              
+              // Hardcoded fallback for production (replace with your actual site key)
               if (!siteKey) {
-                console.error('reCAPTCHA site key not found');
+                siteKey = '6LemW-8rAAAAACMs6sjNncVw87PntujOphyA5JaE'; // Your reCAPTCHA site key
+                console.log('Using hardcoded reCAPTCHA site key as fallback');
+              }
+              
+              if (!siteKey) {
+                console.error('reCAPTCHA site key not found in any method');
+                setError('reCAPTCHA configuration error. Please refresh the page.');
                 return;
               }
               window.grecaptcha.reset();

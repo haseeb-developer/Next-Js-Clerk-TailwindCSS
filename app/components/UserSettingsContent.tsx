@@ -315,6 +315,7 @@ export default function UserSettingsContent() {
     UserProfile: React.ComponentType;
     UserButton: React.ComponentType;
   } | null>(null)
+  const [clerkLoadError, setClerkLoadError] = useState(false)
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null)
   const [timeInfo, setTimeInfo] = useState<TimeInfo | null>(null)
 
@@ -388,18 +389,35 @@ export default function UserSettingsContent() {
       setTimeInfo(getTimeInfo())
     }, 1000)
 
-    // Load Clerk components
-    import('@clerk/nextjs').then((clerk) => {
-      setClerkComponents({
-        UserProfile: clerk.UserProfile,
-        UserButton: clerk.UserButton,
-      })
-    }).catch((error) => {
-      console.error('Failed to load Clerk components:', error);
-    })
+    // Load Clerk components with timeout
+    const loadClerkComponents = async () => {
+      try {
+        const clerk = await import('@clerk/nextjs');
+        setClerkComponents({
+          UserProfile: clerk.UserProfile,
+          UserButton: clerk.UserButton,
+        });
+      } catch (error) {
+        console.error('Failed to load Clerk components:', error);
+        setClerkLoadError(true);
+      }
+    };
 
-    // Cleanup interval on unmount
-    return () => clearInterval(timeInterval)
+    // Set a timeout for Clerk loading
+    const clerkTimeout = setTimeout(() => {
+      if (!clerkComponents) {
+        console.error('Clerk components failed to load within timeout');
+        setClerkLoadError(true);
+      }
+    }, 10000); // 10 second timeout
+
+    loadClerkComponents();
+
+    // Cleanup interval and timeout on unmount
+    return () => {
+      clearInterval(timeInterval);
+      clearTimeout(clerkTimeout);
+    }
   }, [])
 
 
@@ -418,6 +436,33 @@ export default function UserSettingsContent() {
     )
   }
 
+  // Show error state if Clerk failed to load
+  if (clerkLoadError) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+        <div className="w-full max-w-[1800px] mx-auto mx-5">
+          <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-white mb-2">Settings Unavailable</h2>
+              <p className="text-zinc-400 mb-4">Unable to load user settings. Please refresh the page.</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors"
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Show loading state while Clerk components are loading
   if (!clerkComponents) {
     return (
@@ -427,6 +472,7 @@ export default function UserSettingsContent() {
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
               <p className="text-zinc-400 mt-4">Loading user settings...</p>
+              <p className="text-zinc-500 text-sm mt-2">This may take a moment...</p>
             </div>
           </div>
         </div>
