@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useUser, useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
@@ -12,7 +12,7 @@ import { TimeFilterDropdown } from '../components/TimeFilterDropdown'
 
 // Create Supabase client - will be created at runtime when needed
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let supabase: any = null
+let supabase: any = null // Supabase client type
 
 // Helper function to get environment variables with multiple fallbacks
 const getEnvVar = (key: string): string | null => {
@@ -24,9 +24,8 @@ const getEnvVar = (key: string): string | null => {
   
   // Method 2: window object (Vercel fallback)
   if (typeof window !== 'undefined') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const windowValue = (window as any)[key]
-    if (windowValue) {
+    const windowValue = (window as unknown as Record<string, unknown>)[key]
+    if (windowValue && typeof windowValue === 'string') {
       console.log(`Found ${key} in window object`)
       return windowValue
     }
@@ -34,12 +33,10 @@ const getEnvVar = (key: string): string | null => {
   
   // Method 3: Try to get from Next.js data
   if (typeof window !== 'undefined') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nextData = (window as any).__NEXT_DATA__?.props?.pageProps
-    if (nextData) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const nextDataValue = nextData[key]
-      if (nextDataValue) {
+    const nextData = (window as unknown as Record<string, unknown>).__NEXT_DATA__ as { props?: { pageProps?: Record<string, unknown> } } | undefined
+    if (nextData?.props?.pageProps) {
+      const nextDataValue = nextData.props.pageProps[key]
+      if (nextDataValue && typeof nextDataValue === 'string') {
         console.log(`Found ${key} in Next.js data`)
         return nextDataValue
       }
@@ -248,6 +245,128 @@ export default function SafePasswordsPage() {
     icon: 'lock'
   })
 
+  // Session timeout state
+  const [sessionTimeout, setSessionTimeout] = useState(1 * 60 * 1000) // 1 minute default for testing
+  const [timeRemaining, setTimeRemaining] = useState(sessionTimeout)
+  const [isSessionActive, setIsSessionActive] = useState(true)
+  const [showTimeoutToast, setShowTimeoutToast] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const countdownRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Loading state management
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  const [loadingTimeout, setLoadingTimeout] = useState(false)
+
+  // Function declarations (moved before useEffect hooks)
+  const loadData = async () => {
+    console.log('Starting data load...')
+    setIsLoading(true)
+    setLoadingTimeout(false)
+    
+    try {
+      const supabase = getSupabaseClient()
+      if (!supabase) {
+        console.error('Supabase client not available - environment variables may not be set')
+        // Set empty data and continue
+        setPasswords([])
+        setDeletedPasswords([])
+        setFolders([])
+        setCategories([])
+        setHasLoadedOnce(true)
+        setIsLoading(false)
+        return
+      }
+      
+      console.log('Supabase client available, loading data...')
+      
+      // Load all passwords (including deleted ones) for this user only
+      const { data: allPasswordsData, error: passwordsError } = await supabase
+        .from('passwords')
+        .select('*')
+        .eq('user_id', user?.id) // Only get passwords for this user
+        .order('created_at', { ascending: false })
+
+      if (passwordsError) {
+        console.error('Error loading passwords:', passwordsError)
+      }
+
+      // Separate active and deleted passwords
+      const activePasswords = (allPasswordsData || []).filter((p: Password) => !p.is_deleted)
+      const deletedPasswords = (allPasswordsData || []).filter((p: Password) => p.is_deleted)
+
+      setPasswords(activePasswords)
+      setDeletedPasswords(deletedPasswords)
+
+      // Load folders for this user only
+      const { data: foldersData, error: foldersError } = await supabase
+        .from('password_folders')
+        .select('*')
+        .eq('user_id', user?.id) // Only get folders for this user
+        .order('created_at', { ascending: false })
+
+      if (foldersError) {
+        console.error('Error loading folders:', foldersError)
+      }
+
+      setFolders(foldersData || [])
+
+      // Load categories for this user only
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('password_categories')
+        .select('*')
+        .eq('user_id', user?.id) // Only get categories for this user
+        .order('created_at', { ascending: false })
+
+      if (categoriesError) {
+        console.error('Error loading categories:', categoriesError)
+      }
+
+      setCategories(categoriesData || [])
+      
+      console.log('Data loaded successfully:', {
+        passwords: activePasswords.length,
+        deletedPasswords: deletedPasswords.length,
+        folders: foldersData?.length || 0,
+        categories: categoriesData?.length || 0
+      })
+      
+    } catch (error) {
+      console.error('Error loading data:', error)
+      // Set empty data on error
+      setPasswords([])
+      setDeletedPasswords([])
+      setFolders([])
+      setCategories([])
+    } finally {
+      // Always mark as loaded and stop loading
+      setHasLoadedOnce(true)
+      setIsLoading(false)
+      console.log('Data loading completed')
+    }
+  }
+
+
+  // Handle session timeout
+  const handleSessionTimeout = () => {
+    setIsSessionActive(false)
+    setShowTimeoutToast(false)
+    // Redirect to confirm-auth page
+    router.push('/confirm-auth')
+  }
+
+  // Format time remaining for display
+  const formatTimeRemaining = (milliseconds: number) => {
+    const totalSeconds = Math.ceil(milliseconds / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    
+    if (minutes > 0) {
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`
+    } else {
+      return `${seconds}`
+    }
+  }
+
   // Redirect to sign-in if not authenticated
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -255,50 +374,142 @@ export default function SafePasswordsPage() {
     }
   }, [isLoaded, isSignedIn, router])
 
-  // Load data
+  // Load data - simplified to prevent multiple calls
   useEffect(() => {
     if (isSignedIn) {
-      // Try to load data immediately
+      // Always load data when user signs in, regardless of loading state
       loadData()
-      
-      // Also try after a short delay to catch environment variables that load later
-      const delayedLoad = setTimeout(() => {
-        loadData()
-      }, 1000)
-      
-      return () => clearTimeout(delayedLoad)
     }
   }, [isSignedIn])
 
-  // Retry database connection if it fails initially
+  // Load session timeout from URL parameters or localStorage
   useEffect(() => {
-    if (isSignedIn && !isLoading) {
-      let retryCount = 0
-      const maxRetries = 20 // Increased retries for Vercel
+    if (typeof window !== 'undefined') {
+      // Check URL parameters first
+      const urlParams = new URLSearchParams(window.location.search)
+      const timeoutParam = urlParams.get('timeout')
       
-      const retryConnection = () => {
-        const supabase = getSupabaseClient()
-        if (!supabase && retryCount < maxRetries) {
-          retryCount++
-          console.log(`Retrying database connection... (attempt ${retryCount}/${maxRetries})`)
-          
-          // For Vercel, try different delays - more aggressive
-          const delay = retryCount <= 5 ? 500 : retryCount <= 10 ? 1000 : retryCount <= 15 ? 2000 : 3000
-          
-          setTimeout(() => {
-            loadData()
-          }, delay)
-        } else if (retryCount >= maxRetries) {
-          console.error('Max retries reached for database connection - continuing without database')
-          // Don't show error, just continue without database
+      if (timeoutParam) {
+        const timeoutMinutes = parseInt(timeoutParam)
+        const timeoutMs = timeoutMinutes * 60 * 1000
+        setSessionTimeout(timeoutMs)
+        setTimeRemaining(timeoutMs)
+        console.log('Session timeout set from URL:', timeoutMinutes, 'minutes')
+      } else {
+        // Check localStorage for session timeout
+        const storedTimeout = localStorage.getItem('sessionTimeout')
+        if (storedTimeout) {
+          const timeoutMs = parseInt(storedTimeout)
+          setSessionTimeout(timeoutMs)
+          setTimeRemaining(timeoutMs)
+          console.log('Session timeout set from localStorage:', timeoutMs / 1000, 'seconds')
         }
       }
-      
-      // Start retrying immediately
-      const timer = setTimeout(retryConnection, 100)
-      return () => clearTimeout(timer)
     }
-  }, [isSignedIn, isLoading])
+  }, [])
+
+  // Loading timeout - prevent infinite loading
+  useEffect(() => {
+    if (isLoading && !hasLoadedOnce) {
+      const timeout = setTimeout(() => {
+        console.log('Loading timeout reached, showing content anyway')
+        setLoadingTimeout(true)
+        setIsLoading(false)
+      }, 5000) // 5 second timeout
+
+      return () => clearTimeout(timeout)
+    }
+  }, [isLoading, hasLoadedOnce])
+
+  // Session timeout management
+  useEffect(() => {
+    if (isSessionActive && isSignedIn) {
+      let countdownInterval: NodeJS.Timeout | null = null
+      let isCountdownActive = false
+      
+      const startTimer = () => {
+        // Clear any existing timers
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
+        if (countdownRef.current) {
+          clearTimeout(countdownRef.current)
+          countdownRef.current = null
+        }
+        if (countdownInterval) {
+          clearInterval(countdownInterval)
+          countdownInterval = null
+        }
+        
+        // Reset state
+        setTimeRemaining(sessionTimeout)
+        setShowTimeoutToast(true)
+        isCountdownActive = true
+        
+        // Start countdown
+        let remainingTime = sessionTimeout
+        countdownInterval = setInterval(() => {
+          remainingTime -= 1000
+          setTimeRemaining(remainingTime)
+          
+          if (remainingTime <= 0) {
+            if (countdownInterval) {
+              clearInterval(countdownInterval)
+              countdownInterval = null
+            }
+            setShowTimeoutToast(false)
+            handleSessionTimeout()
+            isCountdownActive = false
+          }
+        }, 1000)
+        
+        // Auto logout
+        timeoutRef.current = setTimeout(() => {
+          if (isCountdownActive) {
+            handleSessionTimeout()
+          }
+        }, sessionTimeout)
+      }
+      
+      const handleActivity = () => {
+        // Only reset if countdown is active
+        if (isCountdownActive) {
+          startTimer()
+        }
+      }
+
+      // Listen for user activity
+      const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart']
+      events.forEach(event => {
+        document.addEventListener(event, handleActivity, true)
+      })
+
+      // Start the initial timer
+      console.log('Starting session timeout timer:', sessionTimeout / 1000, 'seconds')
+      startTimer()
+
+      return () => {
+        events.forEach(event => {
+          document.removeEventListener(event, handleActivity, true)
+        })
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
+        if (countdownRef.current) {
+          clearTimeout(countdownRef.current)
+          countdownRef.current = null
+        }
+        if (countdownInterval) {
+          clearInterval(countdownInterval)
+          countdownInterval = null
+        }
+        isCountdownActive = false
+      }
+    }
+  }, [isSessionActive, sessionTimeout, isSignedIn])
+
 
   // Show loading while checking authentication
   if (!isLoaded) {
@@ -326,54 +537,33 @@ export default function SafePasswordsPage() {
     return null
   }
 
-  const loadData = async () => {
-    setIsLoading(true)
+
+  // Audit Log Helper Function
+  const createAuditLog = async (action: string, type: 'password' | 'login' | 'security', details: string, status: 'success' | 'failed' | 'warning' = 'success') => {
     try {
-      const supabase = getSupabaseClient()
-      if (!supabase) {
-        console.error('Supabase client not available - environment variables may not be set')
-        // Don't show error screen, just retry silently
-        setIsLoading(false)
-        return
-      }
+      if (!user) return;
       
-      // Load all passwords (including deleted ones) for this user only
-      const { data: allPasswordsData } = await supabase
-        .from('passwords')
-        .select('*')
-        .eq('user_id', user?.id) // Only get passwords for this user
-        .order('created_at', { ascending: false })
+      const auditLog = {
+        id: Date.now().toString(),
+        action,
+        type,
+        timestamp: new Date().toISOString(),
+        ip: 'Unknown', // Would get real IP in production
+        userAgent: navigator.userAgent,
+        details,
+        status
+      };
 
-      // Separate active and deleted passwords
-      const activePasswords = (allPasswordsData || []).filter((p: Password) => !p.is_deleted)
-      const deletedPasswords = (allPasswordsData || []).filter((p: Password) => p.is_deleted)
-
-      // Load folders for this user only
-      const { data: foldersData } = await supabase
-        .from('password_folders')
-        .select('*')
-        .eq('user_id', user?.id) // Only get folders for this user
-        .order('created_at', { ascending: false })
-
-      // Load categories for this user only
-      const { data: categoriesData } = await supabase
-        .from('password_categories')
-        .select('*')
-        .eq('user_id', user?.id) // Only get categories for this user
-        .order('created_at', { ascending: false })
-
-      setPasswords(activePasswords)
-      setDeletedPasswords(deletedPasswords)
-      setFolders(foldersData || [])
-      setCategories(categoriesData || [])
-      setDbConnectionError(false) // Clear error state on success
+      await user.update({
+        unsafeMetadata: {
+          ...user.unsafeMetadata,
+          auditLogs: [...((user.unsafeMetadata as { auditLogs?: Array<typeof auditLog> })?.auditLogs || []), auditLog]
+        }
+      });
     } catch (error) {
-      console.error('Error loading data:', error)
-      // Don't show error screen, just retry silently
-    } finally {
-      setIsLoading(false)
+      console.error('Error creating audit log:', error);
     }
-  }
+  };
 
   // Password Generator Functions
   const generatePassword = async () => {
@@ -575,6 +765,13 @@ export default function SafePasswordsPage() {
       setShowCreatePassword(false)
       setPasswordForm({ title: '', username: '', password: '', website: '', notes: '', folder_id: '', category_id: '' })
       addToast({ message: 'Password created successfully', type: 'success' })
+      
+      // Create audit log
+      await createAuditLog(
+        'Password Created',
+        'password',
+        `Created password for "${passwordForm.title}" (${passwordForm.username})`
+      )
     } catch (error) {
       console.error('Error creating password:', error)
       addToast({ message: 'Failed to create password', type: 'error' })
@@ -634,6 +831,13 @@ export default function SafePasswordsPage() {
       setEditingPassword(null)
       setPasswordForm({ title: '', username: '', password: '', website: '', notes: '', folder_id: '', category_id: '' })
       addToast({ message: 'Password updated successfully', type: 'success' })
+      
+      // Create audit log
+      await createAuditLog(
+        'Password Updated',
+        'password',
+        `Updated password for "${passwordForm.title}" (${passwordForm.username})`
+      )
     } catch (error) {
       console.error('Error updating password:', error)
       addToast({ message: 'Failed to update password', type: 'error' })
@@ -676,6 +880,13 @@ export default function SafePasswordsPage() {
       setPasswords(prev => prev.filter(p => p.id !== id))
       setDeletedPasswords(prev => [...prev, { ...passwordToDelete, is_deleted: true, deleted_at: new Date().toISOString() }])
       addToast({ message: 'Password moved to recycle bin', type: 'success' })
+      
+      // Create audit log
+      await createAuditLog(
+        'Password Deleted',
+        'password',
+        `Moved password "${passwordToDelete.title}" to recycle bin`
+      )
     } catch (error) {
       console.error('Error deleting password:', error)
       addToast({ message: 'Failed to delete password', type: 'error' })
@@ -760,6 +971,13 @@ export default function SafePasswordsPage() {
         setPasswords(prev => [...prev, { ...passwordToRestore, is_deleted: false, deleted_at: null }])
         setDeletedPasswords(prev => prev.filter(p => p.id !== passwordId))
         addToast({ message: 'Password restored successfully', type: 'success' })
+        
+        // Create audit log
+        await createAuditLog(
+          'Password Restored',
+          'password',
+          `Restored password "${passwordToRestore.title}" from recycle bin`
+        )
       }
     } catch (error) {
       console.error('Error restoring password:', error)
@@ -783,8 +1001,18 @@ export default function SafePasswordsPage() {
 
       if (error) throw error
 
+      const passwordToDelete = deletedPasswords.find(p => p.id === passwordId)
       setDeletedPasswords(prev => prev.filter(p => p.id !== passwordId))
       addToast({ message: 'Password permanently deleted', type: 'success' })
+      
+      // Create audit log
+      if (passwordToDelete) {
+        await createAuditLog(
+          'Password Permanently Deleted',
+          'password',
+          `Permanently deleted password "${passwordToDelete.title}" from recycle bin`
+        )
+      }
     } catch (error) {
       console.error('Error permanently deleting password:', error)
       addToast({ message: 'Failed to permanently delete password', type: 'error' })
@@ -978,7 +1206,7 @@ export default function SafePasswordsPage() {
     }
   }
 
-  if (isLoading) {
+  if (isLoading && !hasLoadedOnce && !loadingTimeout) {
     return (
       <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
         <div className="text-center">
@@ -1734,18 +1962,18 @@ export default function SafePasswordsPage() {
                       style={{ backgroundColor: folders.find(f => f.id === selectedFolderId)?.color }}
                     >
                       <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-                      </svg>
-                    </div>
-                    <div>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                            </svg>
+                          </div>
+                          <div>
                       <h3 className="text-xl font-bold text-white">
                         {folders.find(f => f.id === selectedFolderId)?.name}
                       </h3>
                       <p className="text-gray-400">
                         {passwords.filter(p => p.folder_id === selectedFolderId).length} passwords
                       </p>
-                    </div>
-                  </div>
+                          </div>
+                        </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {passwords
@@ -1809,8 +2037,8 @@ export default function SafePasswordsPage() {
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                      </div>
+                    ))}
                   </div>
                   
                   {passwords.filter(p => p.folder_id === selectedFolderId).length === 0 && (
@@ -1822,8 +2050,8 @@ export default function SafePasswordsPage() {
                       </div>
                       <h3 className="text-lg font-semibold text-gray-300 mb-2">No passwords in this folder</h3>
                       <p className="text-gray-500">Add some passwords to this folder to see them here.</p>
-                    </div>
-                  )}
+                  </div>
+                )}
                 </div>
               </div>
             )}
@@ -2062,9 +2290,9 @@ export default function SafePasswordsPage() {
                     >
                       <div className="text-white text-lg">
                         {getCategoryIcon(categories.find(c => c.id === selectedCategoryId)?.icon || 'tag')}
-                      </div>
-                    </div>
-                    <div>
+                            </div>
+                          </div>
+                          <div>
                       <h3 className="text-xl font-bold text-white">
                         {categories.find(c => c.id === selectedCategoryId)?.name}
                       </h3>
@@ -2134,10 +2362,10 @@ export default function SafePasswordsPage() {
                                   {showPassword[password.id] ? password.password : '••••••••••••••••'}
                                 </span>
                               </div>
-                            </div>
                           </div>
                         </div>
-                      ))}
+                      </div>
+                    ))}
                   </div>
                   
                   {passwords.filter(p => p.category_id === selectedCategoryId).length === 0 && (
@@ -2149,8 +2377,8 @@ export default function SafePasswordsPage() {
                       </div>
                       <h3 className="text-lg font-semibold text-gray-300 mb-2">No passwords in this category</h3>
                       <p className="text-gray-500">Add some passwords to this category to see them here.</p>
-                    </div>
-                  )}
+                  </div>
+                )}
                 </div>
               </div>
             )}
@@ -2180,14 +2408,14 @@ export default function SafePasswordsPage() {
                 </div>
 
                 {deletedPasswords.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-700/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-300 mb-2">Recycle Bin is empty</h3>
-                    <p className="text-gray-500">Deleted passwords will appear here</p>
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-700/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-300 mb-2">Recycle Bin is empty</h3>
+                  <p className="text-gray-500">Deleted passwords will appear here</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -2282,7 +2510,7 @@ export default function SafePasswordsPage() {
                           </div>
                         </div>
                       ))}
-                    </div>
+                </div>
                   </div>
                 )}
               </div>
@@ -2761,7 +2989,7 @@ export default function SafePasswordsPage() {
                                     </svg>
                                     )}
                                   </button>
-                                </div>
+      </div>
                               </div>
                               <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-600/30 min-h-[60px] max-h-[60px] overflow-hidden">
                                 <div className="flex items-center h-full">
@@ -2811,7 +3039,7 @@ export default function SafePasswordsPage() {
                           </div>
                         </div>
                       ))}
-                    </div>
+    </div>
                   )
                 })()}
               </div>
@@ -3162,6 +3390,33 @@ export default function SafePasswordsPage() {
           </motion.div>
         ))}
       </div>
+
+      {/* Session Timeout Toast */}
+      <AnimatePresence>
+        {showTimeoutToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -100, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -100, scale: 0.8 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="fixed top-20 right-4 z-[70] bg-red-500/20 border border-red-500/30 text-red-100 px-6 py-4 rounded-xl shadow-lg backdrop-blur-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-red-500/30 rounded-full flex items-center justify-center">
+                <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold">Session Timeout Warning</div>
+                <div className="text-xs text-red-200">
+                  Session expires in {formatTimeRemaining(timeRemaining)} due to inactivity
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Password Generator Modal */}
       <AnimatePresence>

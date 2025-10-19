@@ -54,7 +54,7 @@ export default function ToolsDropdown({ isActive, onItemClick }: ToolsDropdownPr
       )
     },
     {
-      href: '/safe-passwords',
+      href: '/confirm-auth',
       label: 'Password Save',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
