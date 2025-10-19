@@ -162,8 +162,6 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
       publishableKey={clerkPublishableKey}
       signInFallbackRedirectUrl="/dashboard"
       signUpFallbackRedirectUrl="/dashboard"
-      afterSignInUrl="/dashboard"
-      afterSignUpUrl="/dashboard"
     >
       <div className="min-h-screen">
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">

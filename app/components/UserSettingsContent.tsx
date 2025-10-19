@@ -394,6 +394,8 @@ export default function UserSettingsContent() {
         UserProfile: clerk.UserProfile,
         UserButton: clerk.UserButton,
       })
+    }).catch((error) => {
+      console.error('Failed to load Clerk components:', error);
     })
 
     // Cleanup interval on unmount
@@ -416,20 +418,22 @@ export default function UserSettingsContent() {
     )
   }
 
+  // Show loading state while Clerk components are loading
   if (!clerkComponents) {
     return (
-              <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
-                <div className="w-full max-w-[1800px] mx-auto mx-5">
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+        <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
-              <p className="text-zinc-400 mt-4">Loading authentication...</p>
+              <p className="text-zinc-400 mt-4">Loading user settings...</p>
             </div>
           </div>
         </div>
       </div>
     )
   }
+
 
       return <UserSettingsDisplay 
         {...clerkComponents} 

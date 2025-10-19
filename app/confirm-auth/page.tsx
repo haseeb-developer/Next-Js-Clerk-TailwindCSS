@@ -123,7 +123,7 @@ export default function ConfirmAuthPage() {
   // Load reCAPTCHA v2 script with retry logic
   useEffect(() => {
     let retryCount = 0;
-    const maxRetries = 5;
+    const maxRetries = 15; // Increased retries for better reliability
     
     const loadRecaptcha = () => {
       console.log(`Attempting to load reCAPTCHA (attempt ${retryCount + 1}/${maxRetries})`);
@@ -157,7 +157,7 @@ export default function ConfirmAuthPage() {
             console.log('reCAPTCHA script loaded but not ready, retrying...');
             retryLoad();
           }
-        }, 500);
+        }, 1000); // Increased delay
       };
       
       script.onerror = () => {
@@ -171,8 +171,8 @@ export default function ConfirmAuthPage() {
     const retryLoad = () => {
       retryCount++;
       if (retryCount < maxRetries) {
-        console.log(`Retrying reCAPTCHA load in 1 second... (${retryCount}/${maxRetries})`);
-        setTimeout(loadRecaptcha, 1000);
+        console.log(`Retrying reCAPTCHA load in 2 seconds... (${retryCount}/${maxRetries})`);
+        setTimeout(loadRecaptcha, 2000); // Longer delay between retries
       } else {
         console.error('Failed to load reCAPTCHA after maximum retries');
         setError('Failed to load reCAPTCHA. Please refresh the page.');
