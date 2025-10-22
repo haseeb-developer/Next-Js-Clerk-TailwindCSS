@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useUser } from '@clerk/nextjs'
 import { ToastContainer } from '../../components/Toast'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 import Link from 'next/link'
@@ -42,6 +43,7 @@ const PROGRAMMING_LANGUAGES = [
 export default function UserPublicSnippetsPage() {
   const params = useParams()
   const router = useRouter()
+  const { user, isLoaded } = useUser()
   const userId = params.userId as string
   const [snippets, setSnippets] = useState<PublicSnippet[]>([])
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
@@ -212,12 +214,14 @@ export default function UserPublicSnippetsPage() {
             >
               Browse All Public Snippets
             </Link>
-            <Link
-              href="/sign-up"
-              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-            >
-              Create Account
-            </Link>
+            {!user && (
+              <Link
+                href="/sign-up"
+                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+              >
+                Create Account
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -248,12 +252,14 @@ export default function UserPublicSnippetsPage() {
             >
               Browse All Public Snippets
             </Link>
-            <Link
-              href="/sign-up"
-              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-            >
-              Create Account
-            </Link>
+            {!user && (
+              <Link
+                href="/sign-up"
+                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+              >
+                Create Account
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -325,17 +331,19 @@ export default function UserPublicSnippetsPage() {
                 Browse All Public Snippets
               </span>
             </Link>
-            <Link
-              href="/sign-up"
-              className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-semibold text-lg shadow-xl shadow-purple-500/25 hover:shadow-2xl hover:shadow-purple-500/40 transform hover:scale-105"
-            >
-              <span className="flex items-center gap-3">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
-                Create Account
-              </span>
-            </Link>
+            {!user && (
+              <Link
+                href="/sign-up"
+                className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-semibold text-lg shadow-xl shadow-purple-500/25 hover:shadow-2xl hover:shadow-purple-500/40 transform hover:scale-105"
+              >
+                <span className="flex items-center gap-3">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  Create Account
+                </span>
+              </Link>
+            )}
           </motion.div>
         </div>
 

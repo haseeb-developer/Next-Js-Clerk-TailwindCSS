@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useUser } from '@clerk/nextjs'
 import { ToastContainer } from '../components/Toast'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { useUserID } from '../hooks/useUserID'
 import Link from 'next/link'
 
 interface PublicSnippet {
@@ -34,9 +36,12 @@ const PROGRAMMING_LANGUAGES = [
 ]
 
 export default function PublicSnippetsPage() {
+  const { user, isLoaded } = useUser()
+  const { userID } = useUserID()
   const [snippets, setSnippets] = useState<PublicSnippet[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [searchMode, setSearchMode] = useState<'snippets' | 'users'>('snippets')
   const [selectedLanguage, setSelectedLanguage] = useState('')
   const [sortBy, setSortBy] = useState('newest')
   const [viewingSnippet, setViewingSnippet] = useState<PublicSnippet | null>(null)
@@ -146,11 +151,16 @@ export default function PublicSnippetsPage() {
   }
 
   // Filter and sort snippets
+  const normalizedQuery = searchTerm.trim().toLowerCase()
   const filteredSnippets = snippets.filter(snippet => {
-    const matchesSearch = snippet.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         snippet.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         snippet.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         snippet.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesSearch = searchMode === 'users'
+      ? (!!snippet.user_name && snippet.user_name.toLowerCase().includes(normalizedQuery))
+      : (
+          snippet.title.toLowerCase().includes(normalizedQuery) ||
+          snippet.description?.toLowerCase().includes(normalizedQuery) ||
+          snippet.code.toLowerCase().includes(normalizedQuery) ||
+          snippet.tags?.some(tag => tag.toLowerCase().includes(normalizedQuery))
+        )
     const matchesLanguage = !selectedLanguage || snippet.language === selectedLanguage
     return matchesSearch && matchesLanguage
   }).sort((a, b) => {
@@ -231,28 +241,46 @@ export default function PublicSnippetsPage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
-            <Link
-              href="/sign-in"
-              className="group px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 font-semibold text-lg shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:shadow-indigo-500/40 transform hover:scale-105"
-            >
-              <span className="flex items-center gap-3">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                </svg>
-                Sign In
-              </span>
-            </Link>
-            <Link
-              href="/sign-up"
-              className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-semibold text-lg shadow-xl shadow-purple-500/25 hover:shadow-2xl hover:shadow-purple-500/40 transform hover:scale-105"
-            >
-              <span className="flex items-center gap-3">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
-                Create Account
-              </span>
-            </Link>
+            {user ? (
+              // Show Browse button for logged-in users
+              <Link
+                href={`/${userID?.user_id_number}/public-snippets`}
+                className="group px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 font-semibold text-lg shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:shadow-indigo-500/40 transform hover:scale-105"
+              >
+                <span className="flex items-center gap-3">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  Browse My Public Snippets
+                </span>
+              </Link>
+            ) : (
+              // Show Sign In and Create Account buttons for non-logged-in users
+              <>
+                <Link
+                  href="/sign-in"
+                  className="group px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 font-semibold text-lg shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:shadow-indigo-500/40 transform hover:scale-105"
+                >
+                  <span className="flex items-center gap-3">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                    Sign In
+                  </span>
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 font-semibold text-lg shadow-xl shadow-purple-500/25 hover:shadow-2xl hover:shadow-purple-500/40 transform hover:scale-105"
+                >
+                  <span className="flex items-center gap-3">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                    Create Account
+                  </span>
+                </Link>
+              </>
+            )}
           </motion.div>
         </div>
 
@@ -266,17 +294,40 @@ export default function PublicSnippetsPage() {
           <div className="bg-gradient-to-r from-gray-800/30 to-gray-900/30 backdrop-blur-sm rounded-3xl p-6 border border-gray-700/50">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1">
-                <div className="relative group">
-                  <input
-                    type="text"
-                    placeholder="Search snippets by title, description, code, or tags..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-6 py-4 pl-14 bg-gray-800/60 border border-gray-600/50 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-300 group-hover:border-gray-500/50"
-                  />
-                  <svg className="absolute left-5 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                  </svg>
+                <div className="relative group flex items-stretch gap-3">
+                  {/* Search mode dropdown */}
+                  <div className="relative group">
+                    <select
+                      value={searchMode}
+                      onChange={(e) => setSearchMode(e.target.value as 'snippets' | 'users')}
+                      className="appearance-none px-5 py-4 pr-12 bg-gradient-to-r from-gray-800/60 to-gray-900/60 border border-gray-600/50 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-300 hover:border-indigo-500/50 hover:from-gray-700/60 hover:to-gray-800/60 min-w-[170px] cursor-pointer shadow-lg hover:shadow-xl hover:shadow-indigo-500/10"
+                    >
+                      <option value="snippets" className="bg-gray-800 text-white">Search By Snippets</option>
+                      <option value="users" className="bg-gray-800 text-white">Search By User</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                      <svg 
+                        className="w-5 h-5 text-gray-400 group-hover:text-indigo-400 group-focus-within:text-indigo-400 transition-colors duration-300" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder={searchMode === 'users' ? 'Search by user name...' : 'Search snippets by title, description, code, or tags...'}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-6 py-4 pl-12 bg-gray-800/60 border border-gray-600/50 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-300 group-hover:border-gray-500/50"
+                    />
+                    <svg className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                  </div>
                 </div>
               </div>
               

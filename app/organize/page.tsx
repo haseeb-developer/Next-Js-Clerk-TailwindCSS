@@ -675,10 +675,10 @@ export default function OrganizePage() {
 
   const filteredSnippets = snippets.filter(snippet => {
     const matchesSearch =
-      snippet.title.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
-      snippet.description?.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
-      snippet.code.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
-      snippet.tags?.some(tag => tag.toLowerCase().includes(snippetSearchTerm.toLowerCase()))
+    snippet.title.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
+    snippet.description?.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
+    snippet.code.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
+    snippet.tags?.some(tag => tag.toLowerCase().includes(snippetSearchTerm.toLowerCase()))
     const matchesVisibility =
       snippetVisibilityFilter === 'all' ||
       (snippetVisibilityFilter === 'public' && snippet.is_public) ||
@@ -920,11 +920,11 @@ export default function OrganizePage() {
                         </svg>
                       </div>
                       <div className="flex items-center gap-3">
-                        <input
-                          type="text"
-                          placeholder="Search snippets in this folder..."
-                          value={snippetSearchTerm}
-                          onChange={(e) => setSnippetSearchTerm(e.target.value)}
+                      <input
+                        type="text"
+                        placeholder="Search snippets in this folder..."
+                        value={snippetSearchTerm}
+                        onChange={(e) => setSnippetSearchTerm(e.target.value)}
                           className="flex-1 pl-10 pr-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                         />
                         <div className="flex gap-2 items-center">
@@ -1001,8 +1001,8 @@ export default function OrganizePage() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
                                 <h4 className="text-base sm:text-lg font-semibold text-white line-clamp-2 flex-1">
-                                  {snippet.title}
-                                </h4>
+                                {snippet.title}
+                              </h4>
                                 {snippet.is_public && (
                                   <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-full border border-green-500/30 flex-shrink-0">
                                     Public
@@ -1484,8 +1484,8 @@ export default function OrganizePage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="text-sm font-medium text-white truncate group-hover:text-emerald-300 transition-colors flex-1" title={snippet.title}>
-                                {snippet.title}
-                              </h4>
+                              {snippet.title}
+                            </h4>
                               {snippet.is_public && (
                                 <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs font-medium rounded-full border border-green-500/30 flex-shrink-0">
                                   Public
@@ -1674,31 +1674,31 @@ export default function OrganizePage() {
                       View Public
                     </a>
                   )}
-                  <button
-                    onClick={() => handleModalCopy(viewingSnippet.code)}
-                    className={`px-4 py-2 text-white text-sm rounded-lg transition-all duration-300 cursor-pointer flex items-center gap-2 ${
-                      modalCopyClicked
-                        ? 'bg-green-600 hover:bg-green-700'
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
-                  >
-                    {modalCopyClicked ? (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M5 13l4 4L19 7"/>
-                        </svg>
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-                          <path d="M8 2h8v4H8V2z"/>
-                        </svg>
-                        Copy Code
-                      </>
-                    )}
-                  </button>
+                <button
+                  onClick={() => handleModalCopy(viewingSnippet.code)}
+                  className={`px-4 py-2 text-white text-sm rounded-lg transition-all duration-300 cursor-pointer flex items-center gap-2 ${
+                    modalCopyClicked
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {modalCopyClicked ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                        <path d="M8 2h8v4H8V2z"/>
+                      </svg>
+                      Copy Code
+                    </>
+                  )}
+                </button>
                 </div>
               </div>
               <pre className="text-gray-300 text-sm leading-relaxed overflow-x-auto modal-scroll">
