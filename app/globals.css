@@ -103,3 +103,40 @@ body.scroll-locked {
   position: fixed;
   width: 100%;
 }
+
+
+.cl-rootBox {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Custom dropdown styles for public snippets */
+select option {
+  background-color: #1f2937 !important;
+  color: white !important;
+}
+
+select:focus option {
+  background-color: #374151 !important;
+}
+
+select:focus option:checked {
+  background-color: #4f46e5 !important;
+}
+
+/* Line clamp utilities for text truncation */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

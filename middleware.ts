@@ -17,12 +17,23 @@ const isPublicRoute = createRouteMatcher([
   '/credits',
   '/guest-mode-snippets',
   '/confirm-auth',
+  '/public-snippets(.*)',
   '/api/webhooks(.*)',
+  '/api/public-snippets(.*)',
+  '/api/user-by-id(.*)',
+  '/api/user-public-snippets(.*)',
+  '/api/user-id(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
   // Allow public routes
   if (isPublicRoute(req)) {
+    return NextResponse.next();
+  }
+
+  // Handle dynamic user routes (e.g., /1/public-snippets, /2/public-snippets)
+  const pathname = req.nextUrl.pathname;
+  if (/^\/\d+\/public-snippets/.test(pathname)) {
     return NextResponse.next();
   }
 
@@ -41,7 +52,7 @@ export default clerkMiddleware(async (auth, req) => {
   if (!userId && isProtectedRoute(req)) {
     return NextResponse.redirect(new URL('/sign-in', req.url));
   }
-  
+
   return NextResponse.next();
 });
 

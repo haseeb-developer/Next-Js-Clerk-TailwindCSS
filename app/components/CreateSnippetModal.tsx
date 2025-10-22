@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { CreateSnippetData, Folder, Category, Snippet } from '../../lib/supabase'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
@@ -42,7 +43,7 @@ export default function CreateSnippetModal({
 
   const [tagInput, setTagInput] = useState('')
 
-  // Populate form when editing
+  // Populate form when editing or when modal opens with pre-selected values
   useEffect(() => {
     if (editingSnippet) {
       setFormData({
@@ -56,7 +57,8 @@ export default function CreateSnippetModal({
         folder_id: editingSnippet.folder_id,
         category_id: editingSnippet.category_id
       })
-    } else {
+    } else if (isOpen && !editingSnippet) {
+      // Only reset form data when modal opens for creation, not when selectedCategoryId changes
       setFormData({
         title: '',
         description: '',
@@ -69,11 +71,12 @@ export default function CreateSnippetModal({
         category_id: selectedCategoryId
       })
     }
-  }, [editingSnippet, selectedFolderId, selectedCategoryId])
+  }, [editingSnippet, isOpen, selectedFolderId])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(formData)
+    // Reset form data with current selected values
     setFormData({
       title: '',
       description: '',
@@ -105,11 +108,23 @@ export default function CreateSnippetModal({
     })
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#111B32] border border-gray-700 rounded-3xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <motion.div 
+            className="bg-[#111B32] border border-gray-700 rounded-3xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-white">
             {editingSnippet ? 'Edit Snippet' : 'Create New Snippet'}
@@ -124,7 +139,13 @@ export default function CreateSnippetModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <motion.form 
+          onSubmit={handleSubmit} 
+          className="space-y-6"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-white mb-2">
@@ -171,6 +192,7 @@ export default function CreateSnippetModal({
                 <option value="markdown">Markdown</option>
                 <option value="bash">Bash</option>
                 <option value="powershell">PowerShell</option>
+                <option value="liquid">Liquid</option>
                 <option value="other">Other</option>
               </select>
             </div>
@@ -287,6 +309,26 @@ export default function CreateSnippetModal({
             </label>
           </div>
 
+          {formData.is_public && (
+            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <h5 className="text-green-400 font-medium text-sm mb-1">
+                    Public Snippet
+                  </h5>
+                  <p className="text-green-300/80 text-sm leading-relaxed">
+                    This snippet will be visible to everyone on the public snippets page. Others can view, copy, and learn from your code.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-4 pt-6">
             <button
               type="button"
@@ -302,8 +344,10 @@ export default function CreateSnippetModal({
               {editingSnippet ? 'Update Snippet' : 'Create Snippet'}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </motion.form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }

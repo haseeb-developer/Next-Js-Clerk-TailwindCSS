@@ -17,6 +17,535 @@ interface TimeInfo {
   date: string
 }
 
+// Device Management Section Component
+interface User {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  emailAddresses?: Array<{
+    emailAddress: string;
+    verification?: {
+      status: string;
+    };
+  }>;
+  createdAt?: Date | null;
+  lastSignInAt?: Date | null;
+  updatedAt?: Date | null;
+  imageUrl?: string | null;
+  phoneNumbers?: Array<{
+    phoneNumber: string;
+  }>;
+  unsafeMetadata?: {
+    activeSessions?: Array<{
+      id: string;
+      device: string;
+      browser: string;
+      location: string;
+      lastActive: string;
+      current: boolean;
+    }>;
+    auditLogs?: Array<{
+      id: string;
+      action: string;
+      type: 'password' | 'login' | 'security';
+      timestamp: string;
+      ip: string;
+      userAgent: string;
+      details: string;
+      status: 'success' | 'failed' | 'warning';
+    }>;
+  };
+}
+
+interface DeviceSession {
+  id: string;
+  device: string;
+  browser: string;
+  location: string;
+  lastActive: string;
+  current: boolean;
+}
+
+interface AuditLog {
+  id: string;
+  action: string;
+  type: 'password' | 'login' | 'security';
+  timestamp: string;
+  ip: string;
+  userAgent: string;
+  details: string;
+  status: 'success' | 'failed' | 'warning';
+}
+
+function DeviceManagementSection({ user, deviceInfo }: { user: User; deviceInfo: DeviceInfo | null }) {
+  const [activeSessions, setActiveSessions] = useState<DeviceSession[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [revokingDevice, setRevokingDevice] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load active sessions from user metadata
+    const loadActiveSessions = () => {
+      try {
+        const sessions = user?.unsafeMetadata?.activeSessions || [];
+        
+        // If no sessions in metadata, create current device session
+        if (sessions.length === 0) {
+          const currentSession = {
+            id: 'current_session',
+            device: deviceInfo?.type || 'Desktop',
+            browser: deviceInfo?.browser || 'Chrome',
+            location: 'Unknown',
+            lastActive: new Date().toISOString(),
+            current: true
+          };
+          setActiveSessions([currentSession]);
+        } else {
+          setActiveSessions(sessions);
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading active sessions:', error);
+        setIsLoading(false);
+      }
+    };
+
+    loadActiveSessions();
+  }, [user, deviceInfo]);
+
+  const handleRevokeDevice = async (deviceId: string) => {
+    setRevokingDevice(deviceId);
+    try {
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch('/api/revoke-device', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ deviceId }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove the device from the list
+        setActiveSessions(prev => prev.filter(session => session.id !== deviceId));
+        alert('Device session revoked successfully');
+      } else {
+        alert('Failed to revoke device session');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Request timed out');
+        alert('Request timed out. Please try again.');
+      } else {
+        console.error('Error revoking device:', error);
+        alert('Failed to revoke device session');
+      }
+    } finally {
+      setRevokingDevice(null);
+    }
+  };
+
+  const getDeviceIcon = (device: string) => {
+    if (device === 'Mobile') {
+      return (
+        <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-lg flex items-center justify-center">
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+            <line x1="12" y1="18" x2="12.01" y2="18"/>
+          </svg>
+        </div>
+      );
+    } else if (device === 'Tablet') {
+      return (
+        <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center">
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+      );
+    } else {
+      return (
+        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+      );
+    }
+  };
+
+  const formatLastActive = (lastActive: string) => {
+    const now = new Date();
+    const active = new Date(lastActive);
+    const diffMs = now.getTime() - active.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
+  const getStatusColor = (lastActive: string, current: boolean) => {
+    if (current) return 'text-green-400';
+    const now = new Date();
+    const active = new Date(lastActive);
+    const diffMs = now.getTime() - active.getTime();
+    const diffHours = Math.floor(diffMs / 3600000);
+    
+    if (diffHours < 1) return 'text-green-400';
+    if (diffHours < 24) return 'text-yellow-400';
+    return 'text-gray-400';
+  };
+
+  const getStatusText = (lastActive: string, current: boolean) => {
+    if (current) return 'Active now';
+    const now = new Date();
+    const active = new Date(lastActive);
+    const diffMs = now.getTime() - active.getTime();
+    const diffHours = Math.floor(diffMs / 3600000);
+    
+    if (diffHours < 1) return 'Recently active';
+    if (diffHours < 24) return 'Active today';
+    return 'Inactive';
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+          <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/50">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+          </div>
+          <span className="bg-gradient-to-r from-cyan-400 to-cyan-300 bg-clip-text text-transparent">
+            Device Management
+          </span>
+        </h2>
+        <div className="text-sm text-zinc-400">
+          {activeSessions.length} device{activeSessions.length !== 1 ? 's' : ''} connected
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-cyan-400"></div>
+            <p className="text-zinc-400">Loading devices...</p>
+          </div>
+        </div>
+      ) : activeSessions.length > 0 ? (
+        <div className="grid gap-4">
+          {activeSessions.map((session) => (
+            <div
+              key={session.id}
+              className={`group relative bg-zinc-800/40 rounded-2xl p-5 border transition-all duration-300 hover:shadow-lg ${
+                session.current 
+                  ? 'border-cyan-500/50 shadow-cyan-500/10 bg-gradient-to-r from-cyan-500/5 to-transparent' 
+                  : 'border-zinc-700/50 hover:border-cyan-500/30'
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                {getDeviceIcon(session.device)}
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-white font-semibold text-lg">
+                      {session.device} {session.current && '(Current)'}
+                    </h3>
+                    {session.current && (
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-4 text-sm text-zinc-400 mb-2">
+                    <span className="flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"/>
+                      </svg>
+                      {session.browser}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      </svg>
+                      {session.location}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-medium ${getStatusColor(session.lastActive, session.current)}`}>
+                      {getStatusText(session.lastActive, session.current)}
+                    </span>
+                    <span className="text-xs text-zinc-500">
+                      {formatLastActive(session.lastActive)}
+                    </span>
+                  </div>
+                </div>
+
+                {!session.current && (
+                  <button 
+                    onClick={() => handleRevokeDevice(session.id)}
+                    disabled={revokingDevice === session.id}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {revokingDevice === session.id ? (
+                      <div className="w-5 h-5 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin"></div>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-zinc-800/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">No devices found</h3>
+          <p className="text-zinc-400">Your active devices will appear here when you sign in from different devices.</p>
+        </div>
+      )}
+
+      {/* Security Note */}
+      <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+        <div className="flex items-start gap-3">
+          <svg className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+          </svg>
+          <div>
+            <h4 className="text-yellow-400 font-semibold text-sm mb-1">Security Notice</h4>
+            <p className="text-yellow-300/80 text-xs leading-relaxed">
+              If you see any unfamiliar devices, revoke access immediately. Each device represents an active session where your account is signed in.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AuditLogsSection({ user }: { user: User }) {
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [filter, setFilter] = useState<'all' | 'password' | 'login' | 'security'>('all');
+
+  useEffect(() => {
+    const loadAuditLogs = () => {
+      try {
+        const logs = user?.unsafeMetadata?.auditLogs || [];
+        setAuditLogs(logs);
+      } catch (error) {
+        console.error('Error loading audit logs:', error);
+      }
+    };
+
+    loadAuditLogs();
+  }, [user]);
+
+  const filteredLogs = auditLogs.filter(log => {
+    if (filter === 'all') return true;
+    return log.type === filter;
+  });
+
+  const getActionIcon = (type: string) => {
+    switch (type) {
+      case 'password':
+        return (
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <circle cx="12" cy="16" r="1"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+        );
+      case 'login':
+        return (
+          <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-lg flex items-center justify-center">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10,17 15,12 10,7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+          </div>
+        );
+      case 'security':
+        return (
+          <div className="w-8 h-8 bg-gradient-to-br from-red-400 to-red-600 rounded-lg flex items-center justify-center">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+          </div>
+        );
+      default:
+        return (
+          <div className="w-8 h-8 bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg flex items-center justify-center">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </div>
+        );
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success':
+        return 'text-green-400 bg-green-500/10 border-green-500/20';
+      case 'failed':
+        return 'text-red-400 bg-red-500/10 border-red-500/20';
+      case 'warning':
+        return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+      default:
+        return 'text-gray-400 bg-gray-500/10 border-gray-500/20';
+    }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+          <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/50">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <span className="bg-gradient-to-r from-purple-400 to-purple-300 bg-clip-text text-transparent">
+            Audit Logs
+          </span>
+        </h2>
+        <div className="text-sm text-zinc-400">
+          {filteredLogs.length} log{filteredLogs.length !== 1 ? 's' : ''}
+        </div>
+      </div>
+
+      {/* Filter Buttons */}
+      <div className="flex gap-2 mb-6">
+        {[
+          { key: 'all', label: 'All', count: auditLogs.length },
+          { key: 'password', label: 'Passwords', count: auditLogs.filter(log => log.type === 'password').length },
+          { key: 'login', label: 'Login', count: auditLogs.filter(log => log.type === 'login').length },
+          { key: 'security', label: 'Security', count: auditLogs.filter(log => log.type === 'security').length }
+        ].map(({ key, label, count }) => (
+          <button
+            key={key}
+            onClick={() => setFilter(key as 'all' | 'password' | 'login' | 'security')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              filter === key
+                ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/25'
+                : 'bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-300'
+            }`}
+          >
+            {label} ({count})
+          </button>
+        ))}
+      </div>
+
+      {filteredLogs.length > 0 ? (
+        <div className="space-y-3">
+          {filteredLogs.map((log) => (
+            <div
+              key={log.id}
+              className="bg-zinc-800/40 rounded-xl p-4 border border-zinc-700/30 hover:border-purple-500/30 transition-all duration-200"
+            >
+              <div className="flex items-start gap-4">
+                {getActionIcon(log.type)}
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-white font-semibold text-lg">
+                      {log.action}
+                    </h3>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(log.status)}`}>
+                      {log.status}
+                    </span>
+                  </div>
+                  
+                  <p className="text-zinc-400 text-sm mb-2">
+                    {log.details}
+                  </p>
+                  
+                  <div className="flex items-center gap-4 text-xs text-zinc-500">
+                    <span className="flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12,6 12,12 16,14"/>
+                      </svg>
+                      {formatTimestamp(log.timestamp)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"/>
+                      </svg>
+                      {log.ip}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                      </svg>
+                      {log.userAgent.split(' ')[0]}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-zinc-800/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">No audit logs found</h3>
+          <p className="text-zinc-400">Your activity logs will appear here as you use the application.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function UserSettingsContent() {
   const [isClient, setIsClient] = useState(false)
   const [clerkComponents, setClerkComponents] = useState<{
@@ -26,6 +555,8 @@ export default function UserSettingsContent() {
   const [clerkLoadError, setClerkLoadError] = useState(false)
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null)
   const [timeInfo, setTimeInfo] = useState<TimeInfo | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [isUserLoaded, setIsUserLoaded] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
@@ -97,7 +628,7 @@ export default function UserSettingsContent() {
       setTimeInfo(getTimeInfo())
     }, 1000)
 
-    // Simplified Clerk loading
+    // Load Clerk components
     const loadClerkComponents = () => {
       import('@clerk/nextjs')
         .then((clerk) => {
@@ -124,7 +655,7 @@ export default function UserSettingsContent() {
 
   if (!isClient) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 ml-3 mr-3">
         <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
@@ -140,7 +671,7 @@ export default function UserSettingsContent() {
   // Show error state if Clerk failed to load
   if (clerkLoadError) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 ml-3 mr-3">
         <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
@@ -167,7 +698,7 @@ export default function UserSettingsContent() {
   // Show loading state while Clerk components are loading
   if (!clerkComponents) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 ml-3 mr-3">
         <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
@@ -192,12 +723,21 @@ export default function UserSettingsContent() {
   )
 }
 
+
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function UserSettingsDisplay({ clerkComponents, deviceInfo, timeInfo }: any) {
+  // Mock user data for demonstration - in a real app this would come from Clerk
+  const mockUser = {
+    firstName: 'Muhammad',
+    lastName: 'Ahmed',
+    emailAddresses: [{ emailAddress: 'muhammad@example.com' }],
+    imageUrl: null // Set to null to show the gradient fallback
+  }
   // Show loading if Clerk components are not available
   if (!clerkComponents) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 ml-3 mr-3">
         <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
@@ -214,42 +754,44 @@ function UserSettingsDisplay({ clerkComponents, deviceInfo, timeInfo }: any) {
   const { UserProfile, UserButton } = clerkComponents
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] py-12">
+    <div className="min-h-[calc(100vh-5rem)] py-12 ml-3 mr-3">
       <div className="max-w-[1800px] mx-auto mx-5">
         {/* Header with greeting */}
         <div className="mb-8">
           <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-800/60 backdrop-blur-xl rounded-3xl p-8 border border-zinc-700/50 shadow-2xl shadow-black/20">
             <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-indigo-500/30 ring-4 ring-indigo-500/20">
-                <span className="text-3xl font-bold text-white">
-                  U
-                </span>
+              {/* Profile Image */}
+              <div className="relative">
+                {mockUser?.imageUrl ? (
+                  <div className="w-20 h-20 rounded-3xl overflow-hidden shadow-2xl ring-4 ring-indigo-500/20">
+                    <img 
+                      src={mockUser.imageUrl} 
+                      alt={`${mockUser.firstName || 'User'}'s profile`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-indigo-500/30 ring-4 ring-indigo-500/20">
+                    <span className="text-3xl font-bold text-white">
+                      {mockUser?.firstName?.[0] || mockUser?.emailAddresses?.[0]?.emailAddress[0]?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                )}
+                {/* Online status indicator */}
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-zinc-900 flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                </div>
               </div>
               
               <div className="flex-1">
-                <h1 className="text-4xl font-bold text-white mb-3 bg-gradient-to-r from-white to-zinc-300 bg-clip-text text-transparent">
-                  {timeInfo?.greeting}, Welcome!
+                <h1 className="text-4xl font-bold text-white mb-2 bg-gradient-to-r from-white to-zinc-300 bg-clip-text text-transparent">
+                  {timeInfo?.greeting}, {mockUser?.firstName || mockUser?.emailAddresses?.[0]?.emailAddress.split('@')[0] || 'User'}!
                 </h1>
-                
+                <p className="text-zinc-400 text-lg">
+                  Welcome to your settings dashboard
+                </p>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* User Profile Section */}
-        <div className="mb-8">
-          <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-800/60 backdrop-blur-xl rounded-3xl p-6 border border-zinc-700/50 shadow-2xl shadow-black/20">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/50">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-white">Account Management</h2>
-            </div>
-            
-            <div className="text-center">
-              <UserProfile />
+              
             </div>
           </div>
         </div>
@@ -293,6 +835,33 @@ function UserSettingsDisplay({ clerkComponents, deviceInfo, timeInfo }: any) {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Display Settings */}
+        <div className="mb-8">
+          <div className="bg-gradient-to-br from-zinc-900/60 to-zinc-800/40 backdrop-blur-xl rounded-3xl p-6 border border-zinc-700/50 shadow-2xl">
+            <SwiperSettings />
+          </div>
+        </div>
+
+
+
+        {/* Clerk User Profile Section - At the End */}
+        <div className="mb-8">
+          <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-800/60 backdrop-blur-xl rounded-3xl p-6 border border-zinc-700/50 shadow-2xl shadow-black/20">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/50">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-white">Clerk Account Management</h2>
+            </div>
+            
+            <div className="text-center">
+              <UserProfile routing="hash" />
             </div>
           </div>
         </div>

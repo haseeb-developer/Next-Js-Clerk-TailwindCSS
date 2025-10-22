@@ -14,7 +14,7 @@ export default function DashboardContent() {
   // Show loading state until client-side hydration is complete
   if (!isClient) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12 ml-3 mr-3">
         <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
@@ -52,7 +52,7 @@ function ClientDashboardContent() {
 
   if (!clerkComponents) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] py-12">
+      <div className="flex items-center justify-center min-h-[calc(100vh-5rem)] ml-3 mr-3">
         <div className="w-full max-w-[1800px] mx-auto mx-5">
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">

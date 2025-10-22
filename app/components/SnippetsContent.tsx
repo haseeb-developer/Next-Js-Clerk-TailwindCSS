@@ -16,6 +16,7 @@ import { FolderCard } from './FolderCard'
 import CategoryCard from './CategoryCard'
 import CreateCategoryModal from './CreateCategoryModal'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { useUserID } from '../hooks/useUserID'
 
 const PROGRAMMING_LANGUAGES = [
   'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'PHP', 'Ruby', 'Go', 'Rust',
@@ -78,16 +79,17 @@ export default function SnippetsContent() {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function SnippetsUserContent({ useUser }: any) {
   const { user } = useUser()
+  const { userID, loading: userIDLoading } = useUserID()
   const [snippets, setSnippets] = useState<Snippet[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null)
           const [searchTerm, setSearchTerm] = useState('')
-          const [selectedLanguage, setSelectedLanguage] = useState('')
           const [sortBy, setSortBy] = useState('newest')
           const [showRecentSnippets, setShowRecentSnippets] = useState(true)
           const [showAllSnippets, setShowAllSnippets] = useState(false)
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('')
           const [viewingSnippet, setViewingSnippet] = useState<Snippet | null>(null)
           const [activeTabs, setActiveTabs] = useState<{ [snippetId: string]: 'code' | 'tags' | 'category' | 'info' }>({})
           
@@ -128,6 +130,7 @@ function SnippetsUserContent({ useUser }: any) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
   const [showCategoriesSection, setShowCategoriesSection] = useState(true)
   const [categorySearchTerm, setCategorySearchTerm] = useState('')
+  const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'public' | 'private'>('all')
   const [categorySnippetCounts, setCategorySnippetCounts] = useState<{ [key: string]: number }>({})
           
   // Form validation states
@@ -959,6 +962,20 @@ function SnippetsUserContent({ useUser }: any) {
             category.description?.toLowerCase().includes(categorySearchTerm.toLowerCase())
           )
 
+          // Limit language options to the current Snippets context (e.g., not in folders)
+          const scopeSnippets = snippets.filter(s => {
+            const folderMatch = selectedFolderId ? s.folder_id === selectedFolderId : s.folder_id == null
+            const categoryMatch = selectedCategoryId ? s.category_id === selectedCategoryId : true
+            return folderMatch && categoryMatch
+          })
+
+          // Get unique languages from scoped snippets with counts
+          const languageCounts = scopeSnippets.reduce((acc, snippet) => {
+            const lang = snippet.language || 'other'
+            acc[lang] = (acc[lang] || 0) + 1
+            return acc
+          }, {} as Record<string, number>)
+
           // Filter and sort all snippets
          const filteredSnippets = snippets.filter(snippet => {
             const matchesSearch = snippet.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -968,7 +985,8 @@ function SnippetsUserContent({ useUser }: any) {
             const matchesFavorites = !showFavoritesOnly || snippet.is_favorite
             const matchesFolder = selectedFolderId ? (snippet.folder_id === selectedFolderId) : (snippet.folder_id == null)
             const matchesCategory = selectedCategoryId ? (snippet.category_id === selectedCategoryId) : true
-            return matchesSearch && matchesLanguage && matchesFavorites && matchesFolder && matchesCategory
+            const matchesVisibility = visibilityFilter === 'all' || (visibilityFilter === 'public' && snippet.is_public) || (visibilityFilter === 'private' && !snippet.is_public)
+            return matchesSearch && matchesLanguage && matchesFavorites && matchesFolder && matchesCategory && matchesVisibility
           }).sort((a, b) => {
             switch (sortBy) {
               case 'newest':
@@ -1045,6 +1063,19 @@ function SnippetsUserContent({ useUser }: any) {
                 <p className="text-gray-300 text-lg font-poppins">
                   Save, organize, and manage your code snippets
                 </p>
+                <div className="mt-3">
+                  <a
+                    href={userID?.user_id_number ? `/${userID.user_id_number}/public-snippets` : "/public-snippets"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600/50 text-gray-300 rounded-lg hover:bg-gray-600/70 transition-colors text-sm font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    {userIDLoading ? 'Loading...' : 'Browse My Public Snippets'}
+                  </a>
+                </div>
               </div>
               <div className="flex gap-3">
                 {/* Import Button */}
@@ -1483,9 +1514,16 @@ function SnippetsUserContent({ useUser }: any) {
                             <div className="relative p-4 border-b border-gray-600/50">
                               <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-l-2xl"></div>
                               <div className="ml-3">
-                                <h3 className="text-lg font-bold text-white mb-1 group-hover:text-blue-400 transition-colors" title={snippet.title}>
-                                  {snippet.title}
-                                </h3>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors flex-1" title={snippet.title}>
+                                    {snippet.title}
+                                  </h3>
+                                  {snippet.is_public && (
+                                    <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-full border border-green-500/30 flex-shrink-0">
+                                      Public
+                                    </span>
+                                  )}
+                                </div>
                                 
                                 {snippet.description && (
                                   <>
@@ -1662,10 +1700,14 @@ function SnippetsUserContent({ useUser }: any) {
                             onChange={(e) => setSelectedLanguage(e.target.value)}
                             className="w-full px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
                           >
-                            <option value="">All Languages</option>
-                            {PROGRAMMING_LANGUAGES.map(lang => (
-                              <option key={lang} value={lang}>{lang}</option>
-                            ))}
+                            <option value="">All ({scopeSnippets.length})</option>
+                            {Object.entries(languageCounts)
+                              .sort(([,a], [,b]) => b - a)
+                              .map(([lang, count]) => (
+                                <option key={lang} value={lang}>
+                                  {lang.charAt(0).toUpperCase() + lang.slice(1)} ({count})
+                                </option>
+                              ))}
                           </select>
                           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                             <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1683,6 +1725,24 @@ function SnippetsUserContent({ useUser }: any) {
                           >
                             <option value="all">All Snippets</option>
                             <option value="favorites">⭐ Favorites</option>
+                          </select>
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path d="M19 9l-7 7-7-7"/>
+                            </svg>
+                          </div>
+                        </div>
+
+                        {/* Visibility Filter */}
+                        <div className="relative flex-1 min-w-[160px] sm:min-w-[160px]">
+                          <select
+                            value={visibilityFilter}
+                            onChange={(e) => setVisibilityFilter(e.target.value as 'all' | 'public' | 'private')}
+                            className="w-full px-4 py-3 bg-gray-800/90 border border-gray-600/60 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 cursor-pointer appearance-none pr-10 shadow-sm"
+                          >
+                            <option value="all">All Visibility</option>
+                            <option value="public">Public</option>
+                            <option value="private">Private</option>
                           </select>
                           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                             <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1734,9 +1794,16 @@ function SnippetsUserContent({ useUser }: any) {
               >
                 {/* Title + Description Section */}
                 <div className="p-4">
-                  <h3 className="text-lg font-bold text-white group-hover:text-blue-300 transition-colors duration-150 mb-2" title={snippet.title}>
-                    {snippet.title.length > 25 ? snippet.title.substring(0, 25) + '...' : snippet.title}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-bold text-white group-hover:text-blue-300 transition-colors duration-150 flex-1" title={snippet.title}>
+                      {snippet.title.length > 25 ? snippet.title.substring(0, 25) + '...' : snippet.title}
+                    </h3>
+                    {snippet.is_public && (
+                      <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-full border border-green-500/30 flex-shrink-0">
+                        Public
+                      </span>
+                    )}
+                  </div>
                   {snippet.description && (
                     <>
                       <p className="text-gray-300 text-sm leading-relaxed group-hover:text-gray-200 transition-colors duration-150" title={snippet.description}>

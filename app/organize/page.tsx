@@ -17,6 +17,7 @@ import CreateSnippetModal from '../components/CreateSnippetModal'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useSwiperSettings } from '../hooks/useSwiperSettings'
 import { SwiperSlider } from '../components/SwiperSlider'
+import { useUserID } from '../hooks/useUserID'
 
 export default function OrganizePage() {
   const { user } = useUser()
@@ -24,6 +25,7 @@ export default function OrganizePage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'folders' | 'categories'>('folders')
   const { settings: swiperSettings, isLoaded: swiperSettingsLoaded } = useSwiperSettings()
+  const { userID, loading: userIDLoading } = useUserID()
   
   
   // Folders state
@@ -54,6 +56,8 @@ export default function OrganizePage() {
   const [showSnippetsForFolder, setShowSnippetsForFolder] = useState<string | null>(null)
   const [showSnippetsForCategory, setShowSnippetsForCategory] = useState<string | null>(null)
   const [snippetSearchTerm, setSnippetSearchTerm] = useState('')
+  const [snippetVisibilityFilter, setSnippetVisibilityFilter] = useState<'all' | 'public' | 'private'>('all')
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('')
   const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null)
   const [viewingSnippet, setViewingSnippet] = useState<Snippet | null>(null)
   const [modalCopyClicked, setModalCopyClicked] = useState(false)
@@ -485,7 +489,7 @@ export default function OrganizePage() {
           ...data,
           user_id: user.id,
           folder_id: selectedFolderId,
-          category_id: selectedCategoryId
+          category_id: data.category_id || selectedCategoryId
         }])
 
       if (error) throw error
@@ -502,6 +506,11 @@ export default function OrganizePage() {
       // Refresh snippets for the current folder
       if (showSnippetsForFolder) {
         fetchSnippetsForFolder(showSnippetsForFolder)
+      }
+      
+      // Also refresh snippets for the current category if viewing category snippets
+      if (showSnippetsForCategory) {
+        fetchSnippetsForCategory(showSnippetsForCategory)
       }
       
       // Update folder snippet counts
@@ -540,6 +549,11 @@ export default function OrganizePage() {
       // Refresh snippets for the current folder
       if (showSnippetsForFolder) {
         fetchSnippetsForFolder(showSnippetsForFolder)
+      }
+      
+      // Also refresh snippets for the current category if viewing category snippets
+      if (showSnippetsForCategory) {
+        fetchSnippetsForCategory(showSnippetsForCategory)
       }
 
       setShowCreateSnippet(false)
@@ -652,12 +666,26 @@ export default function OrganizePage() {
     category.description?.toLowerCase().includes(categorySearchTerm.toLowerCase())
   )
 
-  const filteredSnippets = snippets.filter(snippet => 
-    snippet.title.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
-    snippet.description?.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
-    snippet.code.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
-    snippet.tags?.some(tag => tag.toLowerCase().includes(snippetSearchTerm.toLowerCase()))
-  )
+  // Get unique languages from user's snippets with counts
+  const languageCounts = snippets.reduce((acc, snippet) => {
+    const lang = snippet.language || 'other'
+    acc[lang] = (acc[lang] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
+  const filteredSnippets = snippets.filter(snippet => {
+    const matchesSearch =
+      snippet.title.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
+      snippet.description?.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
+      snippet.code.toLowerCase().includes(snippetSearchTerm.toLowerCase()) ||
+      snippet.tags?.some(tag => tag.toLowerCase().includes(snippetSearchTerm.toLowerCase()))
+    const matchesVisibility =
+      snippetVisibilityFilter === 'all' ||
+      (snippetVisibilityFilter === 'public' && snippet.is_public) ||
+      (snippetVisibilityFilter === 'private' && !snippet.is_public)
+    const matchesLanguage = !selectedLanguage || snippet.language === selectedLanguage
+    return matchesSearch && matchesVisibility && matchesLanguage
+  })
 
   if (!user) {
     return (
@@ -690,32 +718,21 @@ export default function OrganizePage() {
             <div>
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2 leading-tight">Organize Your Library</h1>
               <p className="text-gray-300 text-sm md:text-base lg:text-lg leading-relaxed">Manage your folders and categories to keep your code snippets organized</p>
-            </div>
-            {(selectedFolderId || selectedCategoryId) && (
-              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <button
-                  onClick={() => {
-                    setSelectedFolderId(null)
-                    setSelectedCategoryId(null)
-                    setShowSnippetsForFolder(null)
-                    setSnippets([])
-                    setSnippetSearchTerm('')
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-colors cursor-pointer w-full md:w-auto"
-                >
-                  Clear Selected
-                </button>
-                <button
-                  onClick={() => setShowCreateSnippet(true)}
-                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 font-medium flex items-center justify-center gap-2 cursor-pointer w-full md:w-auto"
+              <div className="mt-3">
+                <a
+                  href={userID?.user_id_number ? `/${userID.user_id_number}/public-snippets` : "/public-snippets"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600/50 text-gray-300 rounded-lg hover:bg-gray-600/70 transition-colors text-sm font-medium"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
-                  Create Snippet
-                </button>
+                  {userIDLoading ? 'Loading...' : 'Browse My Public Snippets'}
+                </a>
               </div>
-            )}
+            </div>
+            {/* Action buttons moved next to folder search bar */}
           </div>
         </div>
 
@@ -895,20 +912,81 @@ export default function OrganizePage() {
                       </div>
                     </div>
                     
-                    {/* Search bar for snippets */}
+                    {/* Search bar for snippets + actions */}
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                       </div>
-                      <input
-                        type="text"
-                        placeholder="Search snippets in this folder..."
-                        value={snippetSearchTerm}
-                        onChange={(e) => setSnippetSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-                      />
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          placeholder="Search snippets in this folder..."
+                          value={snippetSearchTerm}
+                          onChange={(e) => setSnippetSearchTerm(e.target.value)}
+                          className="flex-1 pl-10 pr-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                        />
+                        <div className="flex gap-2 items-center">
+                          <div className="relative">
+                            <select
+                              value={selectedLanguage}
+                              onChange={(e) => setSelectedLanguage(e.target.value)}
+                              className="px-3 py-2.5 bg-gray-800 border border-gray-600 rounded-lg text-gray-200 cursor-pointer appearance-none pr-8"
+                            >
+                              <option value="">All ({snippets.length})</option>
+                              {Object.entries(languageCounts)
+                                .sort(([,a], [,b]) => b - a)
+                                .map(([lang, count]) => (
+                                  <option key={lang} value={lang}>
+                                    {lang.charAt(0).toUpperCase() + lang.slice(1)} ({count})
+                                  </option>
+                                ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                          </div>
+                          <div className="relative">
+                            <select
+                              value={snippetVisibilityFilter}
+                              onChange={(e) => setSnippetVisibilityFilter(e.target.value as 'all' | 'public' | 'private')}
+                              className="px-3 py-2.5 bg-gray-800 border border-gray-600 rounded-lg text-gray-200 cursor-pointer appearance-none pr-8"
+                            >
+                              <option value="all">All</option>
+                              <option value="public">Public</option>
+                              <option value="private">Private</option>
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setShowCreateSnippet(true)}
+                            className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 font-medium flex items-center gap-2 cursor-pointer"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Create
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedFolderId(null)
+                              setSelectedCategoryId(null)
+                              setShowSnippetsForFolder(null)
+                              setShowSnippetsForCategory(null)
+                              setSnippets([])
+                              setSnippetSearchTerm('')
+                              setSnippetVisibilityFilter('all')
+                              setSelectedLanguage('')
+                            }}
+                            className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-colors cursor-pointer"
+                          >
+                            Clear Selected
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -921,9 +999,16 @@ export default function OrganizePage() {
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <h4 className="text-base sm:text-lg font-semibold text-white mb-2 line-clamp-2">
-                                {snippet.title}
-                              </h4>
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="text-base sm:text-lg font-semibold text-white line-clamp-2 flex-1">
+                                  {snippet.title}
+                                </h4>
+                                {snippet.is_public && (
+                                  <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-full border border-green-500/30 flex-shrink-0">
+                                    Public
+                                  </span>
+                                )}
+                              </div>
                               {snippet.description && (
                                 <>
                                   <p className="text-gray-300 text-sm mb-3 line-clamp-2">
@@ -1281,6 +1366,7 @@ export default function OrganizePage() {
                         onClick={() => {
                           const newSelectedId = showSnippetsForCategory === category.id ? null : category.id
                           setShowSnippetsForCategory(newSelectedId)
+                          setSelectedCategoryId(newSelectedId)
                           if (newSelectedId) {
                             fetchSnippetsForCategory(newSelectedId)
                           } else {
@@ -1304,6 +1390,7 @@ export default function OrganizePage() {
                         onClick={() => {
                           const newSelectedId = showSnippetsForCategory === category.id ? null : category.id
                           setShowSnippetsForCategory(newSelectedId)
+                          setSelectedCategoryId(newSelectedId)
                           if (newSelectedId) {
                             fetchSnippetsForCategory(newSelectedId)
                           } else {
@@ -1395,9 +1482,16 @@ export default function OrganizePage() {
                           
                           {/* Snippet Info */}
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-white truncate group-hover:text-emerald-300 transition-colors" title={snippet.title}>
-                              {snippet.title}
-                            </h4>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="text-sm font-medium text-white truncate group-hover:text-emerald-300 transition-colors flex-1" title={snippet.title}>
+                                {snippet.title}
+                              </h4>
+                              {snippet.is_public && (
+                                <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs font-medium rounded-full border border-green-500/30 flex-shrink-0">
+                                  Public
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-0.5 rounded-full">
                                 {snippet.language}
@@ -1566,31 +1660,46 @@ export default function OrganizePage() {
             <div className="bg-gray-900/50 rounded-2xl p-4 border border-gray-700/50">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold text-white">Code</h3>
-                <button
-                  onClick={() => handleModalCopy(viewingSnippet.code)}
-                  className={`px-4 py-2 text-white text-sm rounded-lg transition-all duration-300 cursor-pointer flex items-center gap-2 ${
-                    modalCopyClicked
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  {modalCopyClicked ? (
-                    <>
+                <div className="flex items-center gap-2">
+                  {viewingSnippet.is_public && (
+                    <a
+                      href="/public-snippets"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-all duration-300 cursor-pointer flex items-center gap-2"
+                    >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M5 13l4 4L19 7"/>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-                        <path d="M8 2h8v4H8V2z"/>
-                      </svg>
-                      Copy Code
-                    </>
+                      View Public
+                    </a>
                   )}
-                </button>
+                  <button
+                    onClick={() => handleModalCopy(viewingSnippet.code)}
+                    className={`px-4 py-2 text-white text-sm rounded-lg transition-all duration-300 cursor-pointer flex items-center gap-2 ${
+                      modalCopyClicked
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    {modalCopyClicked ? (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                          <path d="M8 2h8v4H8V2z"/>
+                        </svg>
+                        Copy Code
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
               <pre className="text-gray-300 text-sm leading-relaxed overflow-x-auto modal-scroll">
                 <code>{viewingSnippet.code}</code>
