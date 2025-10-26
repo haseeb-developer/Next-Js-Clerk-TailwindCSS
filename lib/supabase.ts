@@ -139,6 +139,32 @@ export interface MediaFolder {
   updated_at: string
 }
 
+export interface MediaCategory {
+  id: string
+  user_id: string
+  name: string
+  color: string
+  icon: string
+  description?: string
+  deleted_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateMediaCategoryData {
+  name: string
+  color?: string
+  icon?: string
+  description?: string
+}
+
+export interface UpdateMediaCategoryData {
+  name?: string
+  color?: string
+  icon?: string
+  description?: string
+}
+
 export interface CreateMediaData {
   file_name: string
   file_type: 'image' | 'video'

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'rea
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUser } from '@clerk/nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { supabase, MediaFile, MediaFolder, Category } from '@/lib/supabase'
+import { supabase, MediaFile, MediaFolder, MediaCategory } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import CreateMediaFolderModal from '@/app/components/CreateMediaFolderModal'
 import CreateMediaModal from '@/app/components/CreateMediaModal'
@@ -13,6 +13,7 @@ import { MediaRecycleBinModal } from '@/app/components/MediaRecycleBinModal'
 import ConfirmDeleteModal from '@/app/components/ConfirmDeleteModal'
 import { DeleteMediaFolderModal } from '@/app/components/DeleteMediaFolderModal'
 import MediaIcon from '@/app/components/MediaIcon'
+import MediaCategoryManager from '@/app/components/MediaCategoryManager'
 
 type MediaFilter = 'all' | 'images' | 'videos' | 'favorites'
 type SortOption = 'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'size-asc' | 'size-desc'
@@ -23,7 +24,7 @@ function MediaPageContent() {
   const searchParams = useSearchParams()
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
   const [folders, setFolders] = useState<MediaFolder[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [categories, setCategories] = useState<MediaCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [currentPath, setCurrentPath] = useState<MediaFolder[]>([])
@@ -31,9 +32,11 @@ function MediaPageContent() {
   const [sortBy, setSortBy] = useState<SortOption>('newest')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [showCreateMedia, setShowCreateMedia] = useState(false)
   const [showRecycleBin, setShowRecycleBin] = useState(false)
+  const [showCategoryManager, setShowCategoryManager] = useState(false)
   const [editingFolder, setEditingFolder] = useState<MediaFolder | null>(null)
   const [viewingMedia, setViewingMedia] = useState<MediaFile | null>(null)
   const [previewMedia, setPreviewMedia] = useState<MediaFile | null>(null)
@@ -41,7 +44,7 @@ function MediaPageContent() {
   const [showDeleteFolderModal, setShowDeleteFolderModal] = useState(false)
   const [folderToDelete, setFolderToDelete] = useState<MediaFolder | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ open: boolean; type: 'media' | 'folder' | null; item: MediaFile | MediaFolder | null }>({ open: false, type: null, item: null })
-  const [openDropdown, setOpenDropdown] = useState<'sort' | 'tag' | null>(null)
+  const [openDropdown, setOpenDropdown] = useState<'sort' | 'tag' | 'category' | null>(null)
   const [verifying, setVerifying] = useState(true)
   
   // Session timeout state
@@ -123,7 +126,7 @@ function MediaPageContent() {
 
     try {
       const { data, error } = await supabase
-        .from('categories')
+        .from('media_categories')
         .select('*')
         .eq('user_id', user.id)
         .is('deleted_at', null)
@@ -198,16 +201,22 @@ function MediaPageContent() {
       
       if (timeoutParam) {
         const timeoutMinutes = parseInt(timeoutParam)
-        const timeoutMs = timeoutMinutes * 60 * 1000
-        setSessionTimeout(timeoutMs)
-        setTimeRemaining(timeoutMs)
+        if (timeoutMinutes === -1) {
+          // Unlimited - set to -1
+          setSessionTimeout(-1)
+          setTimeRemaining(-1)
+        } else {
+          const timeoutMs = timeoutMinutes * 60 * 1000
+          setSessionTimeout(timeoutMs)
+          setTimeRemaining(timeoutMs)
+        }
       }
     }
   }, [])
 
-  // Activity detection
+  // Activity detection - only run when not unlimited
   useEffect(() => {
-    if (!verifying && user) {
+    if (!verifying && user && sessionTimeout !== -1) {
       const inactivityThreshold = 3000 // 3 seconds of inactivity before timer starts
       
       const handleActivity = () => {
@@ -260,9 +269,9 @@ function MediaPageContent() {
     }
   }, [verifying, user, isActive, sessionTimeout, timeRemaining])
 
-  // Session timeout countdown - only countdown when inactive
+  // Session timeout countdown - only countdown when inactive and not unlimited
   useEffect(() => {
-    if (!verifying && user) {
+    if (!verifying && user && sessionTimeout !== -1) {
       let expired = false
       
       // Start countdown only when inactive
@@ -275,7 +284,7 @@ function MediaPageContent() {
               expired = true
               clearInterval(intervalRef.current!)
               setTimeout(() => {
-                router.push('/dashboard')
+                router.push('/confirm-media-auth')
               }, 0)
               return 0
             }
@@ -293,6 +302,9 @@ function MediaPageContent() {
 
   // Format time remaining
   const formatTimeRemaining = (ms: number) => {
+    if (ms === -1) {
+      return 'Unlimited'
+    }
     const seconds = Math.floor(ms / 1000)
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
@@ -367,6 +379,7 @@ function MediaPageContent() {
       if (filter === 'videos' && file.file_type !== 'video') return false
       if (filter === 'favorites' && !file.is_favorite) return false
       if (selectedTag && (!file.tags || !file.tags.includes(selectedTag))) return false
+      if (selectedCategory && file.category_id !== selectedCategory) return false
       if (searchTerm && !file.file_name.toLowerCase().includes(searchTerm.toLowerCase())) return false
       return true
     })
@@ -620,8 +633,8 @@ function MediaPageContent() {
   return (
     <div className="min-h-[calc(100vh-5rem)] py-8">
       <div className="max-w-[2000px] mx-auto px-5">
-        {/* Session Timeout Progress Bar */}
-        {!verifying && hasMediaPin && (
+        {/* Session Timeout Progress Bar - Only show if not unlimited */}
+        {!verifying && hasMediaPin && sessionTimeout !== -1 && (
           <div className="mb-6 bg-gradient-to-r from-red-900/30 via-red-800/20 to-red-900/30 border border-red-500/30 rounded-xl p-4 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -890,6 +903,83 @@ function MediaPageContent() {
                 </AnimatePresence>
               </div>
             )}
+
+            {/* Category Filter */}
+            {categories.length > 0 && (
+              <div className="relative" data-dropdown>
+                <button
+                  onClick={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
+                  className="bg-[#111B32] border border-gray-700 rounded-xl px-4 py-2 text-white hover:border-blue-500 transition-all cursor-pointer flex items-center gap-2 min-w-[150px]"
+                >
+                  <span className="flex-1 text-left">
+                    {selectedCategory ? categories.find(c => c.id === selectedCategory)?.name || 'Unknown' : 'All Categories'}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${openDropdown === 'category' ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <AnimatePresence>
+                  {openDropdown === 'category' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute top-full left-0 mt-2 w-full bg-[#111B32] border border-gray-700 rounded-xl shadow-xl overflow-hidden z-50 max-h-[200px] overflow-y-auto"
+                    >
+                      <motion.button
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        onClick={() => {
+                          setSelectedCategory(null)
+                          setOpenDropdown(null)
+                        }}
+                        className={`w-full px-4 py-3 text-left text-sm hover:bg-blue-600/20 transition-colors cursor-pointer flex items-center justify-between ${
+                          !selectedCategory ? 'bg-blue-600/30 text-blue-400' : 'text-gray-300'
+                        }`}
+                      >
+                        <span>All Categories</span>
+                        {!selectedCategory && (
+                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </motion.button>
+                      {categories.map((category, index) => (
+                        <motion.button
+                          key={category.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: (index + 1) * 0.05 }}
+                          onClick={() => {
+                            setSelectedCategory(category.id)
+                            setOpenDropdown(null)
+                          }}
+                          className={`w-full px-4 py-3 text-left text-sm hover:bg-blue-600/20 transition-colors cursor-pointer flex items-center gap-2 ${
+                            selectedCategory === category.id ? 'bg-blue-600/30 text-blue-400' : 'text-gray-300'
+                          }`}
+                        >
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          <span className="flex-1">{category.name}</span>
+                          {selectedCategory === category.id && (
+                            <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </motion.button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -910,6 +1000,15 @@ function MediaPageContent() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
               Upload Media
+            </button>
+            <button
+              onClick={() => setShowCategoryManager(true)}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all cursor-pointer flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              Manage Categories
             </button>
           </div>
         </div>
@@ -982,27 +1081,25 @@ function MediaPageContent() {
                   key={folder.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="rounded-2xl p-5 hover:scale-105 transition-all cursor-pointer group relative backdrop-blur-md shadow-lg min-w-[200px] max-w-[250px] flex flex-col"
+                  className="rounded-2xl p-5 hover:scale-105 transition-all cursor-pointer group relative backdrop-blur-md shadow-lg w-[280px] flex flex-col"
                   style={{
                     background: `${folder.color}15`,
                     border: `2px solid ${folder.color}50`,
                   }}
                   onClick={() => handleFolderClick(folder)}
                 >
-                  <div className="flex flex-row items-center gap-3 flex-1">
+                  <div className="flex items-start gap-3 flex-1">
                     <div 
                       className="w-16 h-16 flex items-center justify-center rounded-xl backdrop-blur-sm flex-shrink-0"
                       style={{ background: `${folder.color}30` }}
                     >
                       <MediaIcon icon={folder.icon} className="w-10 h-10" style={{ color: folder.color }} />
                     </div>
-                    <div className="flex flex-col items-center text-center flex-1 w-full">
-                      <h3 className="text-white font-semibold truncate w-full mb-1 text-left">{folder.name}</h3>
-                      {folder.description && (
-                        <p className="text-gray-400 text-xs w-full text-left line-clamp-2 overflow-hidden text-ellipsis">
-                          {folder.description}
-                        </p>
-                      )}
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <h3 className="text-white font-semibold truncate w-full mb-1">{folder.name}</h3>
+                      <p className="text-gray-400 text-xs w-full line-clamp-2">
+                        {folder.description || 'No description'}
+                      </p>
                     </div>
                   </div>
                   <button
@@ -1188,6 +1285,7 @@ function MediaPageContent() {
             }}
             editingFolder={editingFolder}
             parentId={selectedFolderId}
+            folders={folders}
           />
         )}
 
@@ -1251,6 +1349,18 @@ function MediaPageContent() {
               setFolderToDelete(null)
             }}
             onConfirm={confirmDeleteFolder}
+          />
+        )}
+
+        {/* Category Manager Modal */}
+        {showCategoryManager && (
+          <MediaCategoryManager
+            isOpen={showCategoryManager}
+            onClose={() => setShowCategoryManager(false)}
+            onSuccess={() => {
+              fetchCategories()
+            }}
+            categories={categories}
           />
         )}
 

@@ -88,7 +88,7 @@ export default function ConfirmAuthPage() {
   const [activeSessions, setActiveSessions] = useState<DeviceSession[]>([]);
   
   // Session Timeout
-  const [sessionTimeout, setSessionTimeout] = useState(30 * 60 * 1000); // 30 minutes
+  const [sessionTimeout, setSessionTimeout] = useState(1 * 60 * 1000); // 1 minute default
   const [timeRemaining, setTimeRemaining] = useState(sessionTimeout);
   const [isSessionActive, setIsSessionActive] = useState(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -403,12 +403,38 @@ export default function ConfirmAuthPage() {
 
   const loadSecurityData = async () => {
     try {
-      // Load failed attempts
-      const attempts = (user?.unsafeMetadata as UserMetadata)?.failedAttempts || [];
+      // EMERGENCY: Clean up oversized metadata to prevent 8KB limit error
+      const currentMetadata = (user?.unsafeMetadata as UserMetadata) || {};
+      const auditLogs = currentMetadata.auditLogs || [];
+      const failedAttempts = currentMetadata.failedAttempts || [];
+      const activeSessions = currentMetadata.activeSessions || [];
+      
+      // If metadata is too large, clean it up
+      if (auditLogs.length > 20 || failedAttempts.length > 10 || activeSessions.length > 5) {
+        console.log('Cleaning oversized metadata to prevent 8KB limit...');
+        const cleanedMetadata = {
+          ...currentMetadata,
+          auditLogs: auditLogs.slice(-20), // Keep only last 20
+          failedAttempts: failedAttempts.slice(-10), // Keep only last 10
+          activeSessions: activeSessions.slice(-5) // Keep only last 5
+        };
+        
+        try {
+          await user?.update({
+            unsafeMetadata: cleanedMetadata as Record<string, unknown>
+          });
+          console.log('Successfully cleaned oversized metadata');
+        } catch (updateError) {
+          console.error('Error cleaning metadata:', updateError);
+        }
+      }
+      
+      // Load failed attempts (already cleaned above)
+      const attempts = currentMetadata.failedAttempts || [];
       setFailedAttempts(attempts);
       
       // Check if account is locked
-      const lockoutData = (user?.unsafeMetadata as UserMetadata)?.lockoutData;
+      const lockoutData = currentMetadata.lockoutData;
       if (lockoutData && lockoutData.until > Date.now()) {
         setIsLocked(true);
         setLockoutTime(lockoutData.until);
@@ -420,9 +446,8 @@ export default function ConfirmAuthPage() {
         await clearExpiredLockout();
       }
       
-      // Load active sessions
-      const sessions = (user?.unsafeMetadata as UserMetadata)?.activeSessions || [];
-      setActiveSessions(sessions);
+      // Load active sessions (already cleaned above)
+      setActiveSessions(activeSessions);
     } catch (error) {
       console.error('Error loading security data:', error);
     }
@@ -582,28 +607,44 @@ export default function ConfirmAuthPage() {
         status: 'success' as const
       };
 
-      // Update user metadata
+      // Helper to limit metadata size
+      const limitMetadataForCreation = (metadata: UserMetadata) => {
+        const limitedAuditLogs = (metadata.auditLogs || []).slice(-20);
+        const limitedFailedAttempts = (metadata.failedAttempts || []).slice(-10);
+        const limitedActiveSessions = (metadata.activeSessions || []).slice(-5);
+        return {
+          ...metadata,
+          auditLogs: limitedAuditLogs,
+          failedAttempts: limitedFailedAttempts,
+          activeSessions: limitedActiveSessions
+        };
+      };
+
+      // Update user metadata with limits
+      const currentMetadata = (user?.unsafeMetadata as UserMetadata) || {};
+      const updatedMetadata = limitMetadataForCreation({
+        ...currentMetadata,
+        mediaPin: {
+          hash: hashedPin,
+          hint: passwordHint || undefined,
+          createdAt: new Date().toISOString()
+        },
+        pinCreatedAt: new Date().toISOString(),
+        activeSessions: [
+          {
+            id: Date.now().toString(),
+            device: navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop',
+            browser: getBrowserName(),
+            location: 'Unknown',
+            lastActive: new Date().toISOString(),
+            current: true
+          }
+        ],
+        auditLogs: [...(currentMetadata.auditLogs || []), auditLog]
+      });
+
       await user?.update({
-        unsafeMetadata: {
-          ...(user?.unsafeMetadata as UserMetadata),
-          mediaPin: {
-            hash: hashedPin,
-            hint: passwordHint || undefined,
-            createdAt: new Date().toISOString()
-          },
-          pinCreatedAt: new Date().toISOString(),
-          activeSessions: [
-            {
-              id: Date.now().toString(),
-              device: navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop',
-              browser: getBrowserName(),
-              location: 'Unknown', // Would use IP geolocation in production
-              lastActive: new Date().toISOString(),
-              current: true
-            }
-          ],
-          auditLogs: [...((user?.unsafeMetadata as UserMetadata)?.auditLogs || []), auditLog]
-        }
+        unsafeMetadata: updatedMetadata as Record<string, unknown>
       });
 
       setPinExists(true);
@@ -721,7 +762,7 @@ export default function ConfirmAuthPage() {
         const failedAuditLog = {
           id: Date.now().toString(),
           action: 'PIN Verification Failed',
-          type: 'security',
+          type: 'security' as const,
           timestamp: new Date().toISOString(),
           ip: 'Unknown',
           userAgent: navigator.userAgent,
@@ -729,13 +770,29 @@ export default function ConfirmAuthPage() {
           status: 'failed' as const
         };
 
-        // Update failed attempts
+        // Helper to limit metadata size
+        const limitMetadataForFailed = (metadata: UserMetadata) => {
+          const limitedAuditLogs = (metadata.auditLogs || []).slice(-20);
+          const limitedFailedAttempts = (metadata.failedAttempts || []).slice(-10);
+          const limitedActiveSessions = (metadata.activeSessions || []).slice(-5);
+          return {
+            ...metadata,
+            auditLogs: limitedAuditLogs,
+            failedAttempts: limitedFailedAttempts,
+            activeSessions: limitedActiveSessions
+          };
+        };
+
+        // Update failed attempts with limited metadata
+        const currentMetadata = (user?.unsafeMetadata as UserMetadata) || {};
+        const updatedMetadata = limitMetadataForFailed({
+          ...currentMetadata,
+          failedAttempts: updatedAttempts,
+          auditLogs: [...(currentMetadata.auditLogs || []), failedAuditLog]
+        });
+
         await user?.update({
-          unsafeMetadata: {
-            ...(user?.unsafeMetadata as UserMetadata),
-            failedAttempts: updatedAttempts,
-            auditLogs: [...((user?.unsafeMetadata as UserMetadata)?.auditLogs || []), failedAuditLog]
-          }
+          unsafeMetadata: updatedMetadata as Record<string, unknown>
         });
         
         setFailedAttempts(updatedAttempts);
@@ -748,7 +805,7 @@ export default function ConfirmAuthPage() {
       const successAuditLog = {
         id: Date.now().toString(),
         action: 'PIN Verification Success',
-        type: 'login',
+        type: 'login' as const,
         timestamp: new Date().toISOString(),
         ip: 'Unknown',
         userAgent: navigator.userAgent,
@@ -756,36 +813,59 @@ export default function ConfirmAuthPage() {
         status: 'success' as const
       };
 
-      // PIN is correct - clear failed attempts and proceed
+      // Helper function to limit metadata size
+      const limitMetadata = (metadata: UserMetadata) => {
+        // Keep only the last 20 audit logs to prevent metadata bloat
+        const limitedAuditLogs = (metadata.auditLogs || []).slice(-20);
+        
+        // Keep only the last 10 failed attempts
+        const limitedFailedAttempts = (metadata.failedAttempts || []).slice(-10);
+        
+        // Keep only the last 5 active sessions
+        const limitedActiveSessions = (metadata.activeSessions || []).slice(-5);
+        
+        return {
+          ...metadata,
+          auditLogs: limitedAuditLogs,
+          failedAttempts: limitedFailedAttempts,
+          activeSessions: limitedActiveSessions
+        };
+      };
+
+      // PIN is correct - clear failed attempts and proceed with limited metadata
+      const currentMetadata = (user?.unsafeMetadata as UserMetadata) || {};
+      const updatedMetadata = limitMetadata({
+        ...currentMetadata,
+        failedAttempts: [],
+        lockoutData: undefined,
+        activeSessions: [
+          ...activeSessions.filter(s => !s.current),
+          {
+            id: Date.now().toString(),
+            device: navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop',
+            browser: getBrowserName(),
+            location: 'Unknown',
+            lastActive: new Date().toISOString(),
+            current: true
+          }
+        ],
+        auditLogs: [...(currentMetadata.auditLogs || []), successAuditLog]
+      });
+
       await user?.update({
-        unsafeMetadata: {
-          ...(user?.unsafeMetadata as UserMetadata),
-          failedAttempts: [],
-          lockoutData: undefined,
-          activeSessions: [
-            ...activeSessions.filter(s => !s.current),
-            {
-              id: Date.now().toString(),
-              device: navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop',
-              browser: getBrowserName(),
-              location: 'Unknown',
-              lastActive: new Date().toISOString(),
-              current: true
-            }
-          ],
-          auditLogs: [...((user?.unsafeMetadata as UserMetadata)?.auditLogs || []), successAuditLog]
-        }
+        unsafeMetadata: updatedMetadata as Record<string, unknown>
       });
 
       // Redirect to media with PIN verification flag and session timeout
+      const timeoutValue = sessionTimeout === -1 ? -1 : sessionTimeout / 60000;
       console.log('PIN verified successfully, redirecting to media...');
-      router.push(`/media?pinVerified=true&timeout=${sessionTimeout / 60000}`);
+      router.push(`/media?pinVerified=true&timeout=${timeoutValue}`);
       console.log('Redirect command sent');
       
       // Fallback redirect in case router.push doesn't work
       setTimeout(() => {
         console.log('Fallback redirect triggered');
-        window.location.href = `/media?pinVerified=true&timeout=${sessionTimeout / 60000}`;
+        window.location.href = `/media?pinVerified=true&timeout=${timeoutValue}`;
       }, 1000);
     } catch (error) {
       console.error('Error verifying PIN:', error);
@@ -835,12 +915,12 @@ export default function ConfirmAuthPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
       {/* Session Timeout Warning */}
       <AnimatePresence>
-        {timeRemaining < 5 * 60 * 1000 && timeRemaining > 0 && (
+        {isSessionActive && timeRemaining < 5 * 60 * 1000 && timeRemaining > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed top-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-lg z-50"
+            className="fixed top-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-lg z-[99999]"
           >
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
@@ -1082,30 +1162,39 @@ export default function ConfirmAuthPage() {
               </div>
               
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Session Timeout (minutes)
-                  </label>
-                  <select
-                    value={sessionTimeout / 60000}
-                    onChange={(e) => setSessionTimeout(Number(e.target.value) * 60000)}
-                    className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
-                      backgroundPosition: 'right 0.5rem center',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundSize: '1.5em 1.5em',
-                      paddingRight: '2.5rem'
-                    }}
-                  >
-                    <option value={1} className="bg-zinc-800 text-white">1 minute</option>
-                    <option value={5} className="bg-zinc-800 text-white">5 minutes</option>
-                    <option value={15} className="bg-zinc-800 text-white">15 minutes</option>
-                    <option value={30} className="bg-zinc-800 text-white">30 minutes</option>
-                    <option value={60} className="bg-zinc-800 text-white">1 hour</option>
-                    <option value={120} className="bg-zinc-800 text-white">2 hours</option>
-                  </select>
-                </div>
+                                 <div>
+                   <label className="block text-sm font-medium text-gray-300 mb-2">
+                     Session Timeout
+                   </label>
+                   <select
+                     value={sessionTimeout === -1 ? 'unlimited' : sessionTimeout / 60000}
+                     onChange={(e) => {
+                       if (e.target.value === 'unlimited') {
+                         setSessionTimeout(-1);
+                         setIsSessionActive(false);
+                       } else {
+                         setSessionTimeout(Number(e.target.value) * 60000);
+                         setIsSessionActive(true);
+                       }
+                     }}
+                     className="w-full px-3 py-2 bg-zinc-800/70 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer"
+                     style={{
+                       backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                       backgroundPosition: 'right 0.5rem center',
+                       backgroundRepeat: 'no-repeat',
+                       backgroundSize: '1.5em 1.5em',
+                       paddingRight: '2.5rem'
+                     }}
+                   >
+                     <option value="unlimited" className="bg-zinc-800 text-white">No Limit</option>
+                     <option value={1} className="bg-zinc-800 text-white">1 minute</option>
+                     <option value={5} className="bg-zinc-800 text-white">5 minutes</option>
+                     <option value={15} className="bg-zinc-800 text-white">15 minutes</option>
+                     <option value={30} className="bg-zinc-800 text-white">30 minutes</option>
+                     <option value={60} className="bg-zinc-800 text-white">1 hour</option>
+                     <option value={120} className="bg-zinc-800 text-white">2 hours</option>
+                   </select>
+                 </div>
                 
                 <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
                   <div className="text-red-200 text-sm font-medium mb-1">Failed Login Attempts</div>

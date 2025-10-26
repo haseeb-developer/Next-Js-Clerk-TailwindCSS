@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUser } from '@clerk/nextjs'
-import { supabase, MediaFile, Category } from '@/lib/supabase'
+import { supabase, MediaFile, MediaCategory } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useBodyScrollLock } from '@/app/hooks/useBodyScrollLock'
 
@@ -21,7 +21,7 @@ export default function MediaViewerModal({
   onUpdate
 }: MediaViewerModalProps) {
   const { user } = useUser()
-  const [categories, setCategories] = useState<Category[]>([])
+  const [categories, setCategories] = useState<MediaCategory[]>([])
   const [loading, setLoading] = useState(false)
   const [title, setTitle] = useState(media.file_name || '')
   const [description, setDescription] = useState(media.description || '')
@@ -32,7 +32,7 @@ export default function MediaViewerModal({
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingDescription, setEditingDescription] = useState(false)
   const [editingTags, setEditingTags] = useState(false)
-  const [editingCategory, setEditingCategory] = useState(false)
+  const [openCategoryDropdown, setOpenCategoryDropdown] = useState(false)
 
   useBodyScrollLock(isOpen)
 
@@ -47,7 +47,7 @@ export default function MediaViewerModal({
       setEditingTitle(false)
       setEditingDescription(false)
       setEditingTags(false)
-      setEditingCategory(false)
+      setOpenCategoryDropdown(false)
     }
   }, [isOpen, media?.id, media?.file_name, media?.description, media?.tags, media?.is_favorite, media?.category_id])
 
@@ -56,7 +56,7 @@ export default function MediaViewerModal({
 
     try {
       const { data, error } = await supabase
-        .from('categories')
+        .from('media_categories')
         .select('*')
         .eq('user_id', user.id)
         .is('deleted_at', null)
@@ -147,7 +147,8 @@ export default function MediaViewerModal({
       onUpdate()
     } catch (error) {
       console.error('Error updating media:', error)
-      toast.error('Failed to update media')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(`Failed to update media: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
@@ -370,40 +371,79 @@ export default function MediaViewerModal({
                 </div>
 
                 {/* Category Section */}
-                <div>
+                <div className="relative" data-dropdown>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Category</label>
-                  {editingCategory ? (
-                    <div className="space-y-2">
-                      <select
-                        value={selectedCategory || ''}
-                        onChange={(e) => setSelectedCategory(e.target.value || null)}
-                        onBlur={() => setEditingCategory(false)}
-                        className="w-full bg-[#111B32] border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                        autoFocus
+                  <button
+                    onClick={() => setOpenCategoryDropdown(!openCategoryDropdown)}
+                    className="w-full bg-[#111B32] border border-gray-700 rounded-xl px-4 py-3 text-white hover:border-blue-500 transition-colors flex items-center justify-between cursor-pointer"
+                  >
+                    <span className="text-gray-300">
+                      {selectedCategory ? categories.find(c => c.id === selectedCategory)?.name || 'Unknown' : 'No category'}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 transition-transform ${openCategoryDropdown ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <AnimatePresence>
+                    {openCategoryDropdown && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute top-full left-0 right-0 mt-2 bg-[#111B32] border border-gray-700 rounded-xl shadow-xl overflow-hidden z-50 max-h-[200px] overflow-y-auto"
                       >
-                        <option value="">No Category</option>
-                        {categories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
+                        <motion.button
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          onClick={() => {
+                            setSelectedCategory(null)
+                            setOpenCategoryDropdown(false)
+                          }}
+                          className={`w-full px-4 py-3 text-left text-sm hover:bg-blue-600/20 transition-colors cursor-pointer flex items-center justify-between ${
+                            !selectedCategory ? 'bg-blue-600/30 text-blue-400' : 'text-gray-300'
+                          }`}
+                        >
+                          <span>No Category</span>
+                          {!selectedCategory && (
+                            <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </motion.button>
+                        {categories.map((category, index) => (
+                          <motion.button
+                            key={category.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: (index + 1) * 0.05 }}
+                            onClick={() => {
+                              setSelectedCategory(category.id)
+                              setOpenCategoryDropdown(false)
+                            }}
+                            className={`w-full px-4 py-3 text-left text-sm hover:bg-blue-600/20 transition-colors cursor-pointer flex items-center gap-2 ${
+                              selectedCategory === category.id ? 'bg-blue-600/30 text-blue-400' : 'text-gray-300'
+                            }`}
+                          >
+                            <div
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: category.color }}
+                            />
+                            <span className="flex-1">{category.name}</span>
+                            {selectedCategory === category.id && (
+                              <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </motion.button>
                         ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="w-full bg-[#111B32] border border-gray-700 rounded-xl px-4 py-3 text-white hover:border-blue-500 transition-colors flex items-center justify-between group">
-                      <span className="text-gray-300">
-                        {selectedCategory ? categories.find(c => c.id === selectedCategory)?.name || 'Unknown' : 'No category'}
-                      </span>
-                      <button
-                        onClick={() => setEditingCategory(true)}
-                        className="p-1 cursor-pointer hover:bg-gray-700 rounded transition-colors"
-                      >
-                        <svg className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <div className="flex items-center justify-between gap-2 p-4 bg-[#111B32] rounded-xl">

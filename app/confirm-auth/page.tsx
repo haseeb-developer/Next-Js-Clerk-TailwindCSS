@@ -835,7 +835,7 @@ export default function ConfirmAuthPage() {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed top-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-lg z-50"
+            className="fixed top-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-lg z-[99999]"
           >
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
