@@ -116,12 +116,12 @@ export function RecycleBinModal({
     if (selectedItems.size === filteredItems.length) {
       setSelectedItems(new Set())
     } else {
-      setSelectedItems(new Set(filteredItems.map(item => `${item.type}-${item.id}`)))
+      setSelectedItems(new Set(filteredItems.map(item => `${item.type}|${item.id}`)))
     }
   }
 
   const handleSelectItem = (itemId: string, itemType: string) => {
-    const key = `${itemType}-${itemId}`
+    const key = `${itemType}|${itemId}` // Use pipe separator
     const newSelected = new Set(selectedItems)
     if (newSelected.has(key)) {
       newSelected.delete(key)
@@ -171,16 +171,35 @@ export function RecycleBinModal({
 
   const handleRestoreSelected = async () => {
     try {
-      const restorePromises = Array.from(selectedItems).map(async (key) => {
-        const [itemType, itemId] = key.split('-')
-        return handleRestoreItem(itemId, itemType)
-      })
+      const selectedItemsArray = Array.from(selectedItems)
+      const selectedCount = selectedItemsArray.length
+      
+      // Process each item individually to handle partial failures
+      const results = await Promise.allSettled(
+        selectedItemsArray.map(async (key) => {
+          const [itemType, itemId] = key.split('|') // Use pipe separator
+          return handleRestoreItem(itemId, itemType)
+        })
+      )
 
-      await Promise.all(restorePromises)
+      // Count successful and failed restores
+      const successful = results.filter(result => result.status === 'fulfilled').length
+      const failed = results.filter(result => result.status === 'rejected').length
+
       setSelectedItems(new Set())
       fetchRecycleBinData()
-      onShowToast(`Restored ${selectedItems.size} item(s)`, 'success')
-    } catch {
+
+      if (successful > 0) {
+        if (failed === 0) {
+          onShowToast(`Successfully restored ${successful} item(s)`, 'success')
+        } else {
+          onShowToast(`Restored ${successful} item(s), ${failed} failed`, 'error')
+        }
+      } else {
+        onShowToast('Failed to restore selected items', 'error')
+      }
+    } catch (error) {
+      console.error('Error in handleRestoreSelected:', error)
       onShowToast('Failed to restore selected items', 'error')
     }
   }
@@ -219,7 +238,7 @@ export function RecycleBinModal({
   }
 
   const renderItem = (item: DeletedSnippet | DeletedFolder | DeletedCategory, itemType: string) => {
-    const key = `${itemType}-${item.id}`
+    const key = `${itemType}|${item.id}` // Use pipe separator
     const isSelected = selectedItems.has(key)
 
     return (

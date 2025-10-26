@@ -20,13 +20,11 @@ export async function POST(request: NextRequest) {
 
     switch (type) {
       case 'snippet':
-        // Restore snippet
         const { error: snippetError } = await supabase
           .from('snippets')
           .update({ deleted_at: null })
           .eq('id', id)
           .eq('user_id', userId)
-          .not('deleted_at', 'is', null)
 
         if (snippetError) {
           console.error('Error restoring snippet:', snippetError)
@@ -36,13 +34,11 @@ export async function POST(request: NextRequest) {
         break
 
       case 'folder':
-        // Restore folder by setting deleted_at to null
         const { error: folderError } = await supabase
           .from('folders')
           .update({ deleted_at: null })
           .eq('id', id)
           .eq('user_id', userId)
-          .not('deleted_at', 'is', null)
 
         if (folderError) {
           console.error('Error restoring folder:', folderError)
@@ -52,13 +48,11 @@ export async function POST(request: NextRequest) {
         break
 
       case 'category':
-        // Restore category by setting deleted_at to null
         const { error: categoryError } = await supabase
           .from('categories')
           .update({ deleted_at: null })
           .eq('id', id)
           .eq('user_id', userId)
-          .not('deleted_at', 'is', null)
 
         if (categoryError) {
           console.error('Error restoring category:', categoryError)

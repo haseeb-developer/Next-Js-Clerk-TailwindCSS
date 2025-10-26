@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { supabase, type Snippet, type CreateSnippetData, type Folder, type CreateFolderData, type Category, type CreateCategoryData } from '../../lib/supabase'
 import { Toast, ToastContainer } from './Toast'
 import { DeleteConfirmationModal } from './DeleteConfirmationModal'
-import { ComprehensiveRecycleBinModal } from './ComprehensiveRecycleBinModal'
 import { ExportModal } from './ExportModal'
 import { ImportModal } from './ImportModal'
 import { CreateFolderModal } from './CreateFolderModal'
@@ -102,7 +101,6 @@ function SnippetsUserContent({ useUser }: any) {
           // Modal states
           const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
           const [snippetToDelete, setSnippetToDelete] = useState<Snippet | null>(null)
-          const [showRecycleBin, setShowRecycleBin] = useState(false)
           
           // Copy state for toast feedback
           const [copiedSnippetId, setCopiedSnippetId] = useState<string | null>(null)
@@ -453,55 +451,6 @@ function SnippetsUserContent({ useUser }: any) {
       console.error('Error deleting snippet:', error)
       addToast({
         message: 'Failed to delete snippet',
-        type: 'error'
-      })
-    }
-  }, [fetchSnippets, addToast])
-
-  // Permanent delete (from recycle bin)
-  const handlePermanentDelete = useCallback(async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('snippets')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-
-      addToast({
-        message: 'Snippet permanently deleted',
-        type: 'success'
-      })
-    } catch (error) {
-      console.error('Error permanently deleting snippet:', error)
-      addToast({
-        message: 'Failed to permanently delete snippet',
-        type: 'error'
-      })
-    }
-  }, [addToast])
-
-  // Restore from recycle bin
-  const handleRestoreSnippet = useCallback(async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('snippets')
-        .update({ deleted_at: null })
-        .eq('id', id)
-
-      if (error) throw error
-
-      addToast({
-        message: 'Snippet restored successfully',
-        type: 'success'
-      })
-      
-      // Refresh snippets list
-      fetchSnippets()
-    } catch (error) {
-      console.error('Error restoring snippet:', error)
-      addToast({
-        message: 'Failed to restore snippet',
         type: 'error'
       })
     }
@@ -1099,18 +1048,6 @@ function SnippetsUserContent({ useUser }: any) {
                   </svg>
                   Export
                 </button>
-                
-                {hasNewSchema === true && (
-                  <button
-                    onClick={() => setShowRecycleBin(true)}
-                    className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all duration-300 shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:scale-105 cursor-pointer flex items-center gap-1.5"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                    Recycle Bin
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -1262,7 +1199,7 @@ function SnippetsUserContent({ useUser }: any) {
                   </div>
 
                   {filteredFolders.length > 0 ? (
-                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div className="flex flex-wrap gap-5">
                       {filteredFolders.map((folder) => {
                         const snippetCount = snippets.filter(s => s.folder_id === folder.id).length
                         return (
@@ -1414,7 +1351,7 @@ function SnippetsUserContent({ useUser }: any) {
                 )}
 
                 {filteredCategories.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  <div className="flex flex-wrap gap-5">
                     {filteredCategories.map((category) => (
                       <CategoryCard
                         key={category.id}
@@ -1776,7 +1713,7 @@ function SnippetsUserContent({ useUser }: any) {
 
 
                 {filteredSnippets.length > 0 ? (
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="flex flex-wrap gap-5">
           {filteredSnippets.map((snippet) => {
             const createdDate = new Date(snippet.created_at)
             const updatedDate = new Date(snippet.updated_at)
@@ -1786,7 +1723,7 @@ function SnippetsUserContent({ useUser }: any) {
             return (
               <motion.div
                 key={snippet.id}
-                className="bg-gray-800 rounded-2xl border border-gray-600 shadow-xl hover:shadow-2xl hover:border-gray-500 transition-all duration-150 group overflow-hidden h-full flex flex-col hover:bg-gray-700 w-full max-w-sm mx-auto"
+                className="bg-gray-800 rounded-2xl border border-gray-600 shadow-xl hover:shadow-2xl hover:border-gray-500 transition-all duration-150 group overflow-hidden h-full flex flex-col hover:bg-gray-700 flex-[1_1_280px] max-w-[320px]"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.15 }}
@@ -2560,16 +2497,6 @@ function SnippetsUserContent({ useUser }: any) {
         message={showAlert.message}
         variant={showAlert.variant}
         onClose={() => setShowAlert({ open: false, title: '', message: '' })}
-      />
-
-      {/* Comprehensive Recycle Bin Modal */}
-      <ComprehensiveRecycleBinModal
-        isOpen={showRecycleBin}
-        onClose={() => setShowRecycleBin(false)}
-        onRestore={handleRestoreSnippet}
-        onPermanentDelete={handlePermanentDelete}
-        userId={user?.id || ''}
-        onShowToast={(message, type) => addToast({ message, type })}
       />
 
       {/* Category Modals */}

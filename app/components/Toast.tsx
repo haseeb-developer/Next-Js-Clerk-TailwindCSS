@@ -65,7 +65,7 @@ export function ToastComponent({ toast, onRemove }: ToastProps) {
 
   return (
     <div
-      className={`fixed top-4 right-4 z-[10000] flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg transition-all duration-300 ${
+      className={`relative flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg transition-all duration-300 ${
         isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
       } ${getToastStyles()}`}
     >
@@ -95,7 +95,7 @@ interface ToastContainerProps {
 
 export function ToastContainer({ toasts, removeToast }: ToastContainerProps) {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+    <div className="fixed top-4 right-4 z-[9999] space-y-2">
       {toasts.map((toast) => (
         <ToastComponent key={toast.id} toast={toast} onRemove={removeToast} />
       ))}

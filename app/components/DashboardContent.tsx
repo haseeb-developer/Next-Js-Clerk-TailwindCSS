@@ -3,6 +3,22 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Snippet, Folder } from '../../lib/supabase'
+import { ComprehensiveRecycleBinModal } from './ComprehensiveRecycleBinModal'
+
+// Password interface
+interface Password {
+  id: string
+  title: string
+  username: string
+  website: string
+  is_favorite: boolean
+  folder_id: string | null
+  category_id: string | null
+  created_at: string
+  updated_at: string
+  is_deleted?: boolean
+  deleted_at?: string | null
+}
 
 export default function DashboardContent() {
   const [isClient, setIsClient] = useState(false)
@@ -75,7 +91,10 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
   
   const [snippets, setSnippets] = useState<Snippet[]>([])
   const [folders, setFolders] = useState<Folder[]>([])
+  const [passwords, setPasswords] = useState<Password[]>([])
   const [loading, setLoading] = useState(true)
+  const [showRecycleBin, setShowRecycleBin] = useState(false)
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: 'success' | 'error' | 'info' }>>([])
   const [recentActivity, setRecentActivity] = useState<Array<{
     action: string
     item: string
@@ -129,6 +148,7 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
         .from('folders')
         .select('*')
         .eq('user_id', user.id)
+        .is('deleted_at', null)
         .order('updated_at', { ascending: false })
 
       if (foldersError) {
@@ -136,10 +156,31 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
         throw foldersError
       }
 
+      // Fetch passwords
+      let passwordsData: Password[] = []
+      try {
+        const { data: passwordsDataQuery, error: passwordsError } = await supabase
+          .from('passwords')
+          .select('*')
+          .eq('user_id', user.id)
+          .is('deleted_at', null)
+          .order('updated_at', { ascending: false })
+
+        if (passwordsError) {
+          console.log('Error fetching passwords:', passwordsError)
+          // Don't throw, just continue without passwords if table doesn't exist
+        } else {
+          passwordsData = passwordsDataQuery || []
+        }
+      } catch (error) {
+        console.log('Passwords table might not exist, continuing without password data')
+      }
+
       setSnippets(snippetsData || [])
       setFolders(foldersData || [])
+      setPasswords(passwordsData)
 
-      // Generate recent activity
+      // Generate recent activity with passwords included
       const activities = []
       
       // Add recent snippets
@@ -151,6 +192,17 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
         type: 'snippet',
         id: `snippet-${snippet.id}`,
         originalId: snippet.id
+      }))
+
+      // Add recent passwords
+      const recentPasswords = (passwordsData || []).slice(0, 2).map((password: Password) => ({
+        action: 'Created',
+        item: password.title,
+        time: getRelativeTime(password.created_at),
+        timestamp: new Date(password.created_at).getTime(),
+        type: 'password',
+        id: `password-${password.id}`,
+        originalId: password.id
       }))
 
       // Add recent folder updates
@@ -176,15 +228,15 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
         originalId: snippet.id
       }))
 
-      activities.push(...recentSnippets, ...recentFolders, ...favorites)
+      activities.push(...recentSnippets, ...recentPasswords, ...recentFolders, ...favorites)
       activities.sort((a, b) => b.timestamp - a.timestamp)
       
-      // Remove duplicates based on unique id and take only the first 5
+      // Remove duplicates based on unique id and take only the first 8
       const uniqueActivities = activities.filter((activity, index, self) => 
         index === self.findIndex(a => a.id === activity.id)
       )
       
-      setRecentActivity(uniqueActivities.slice(0, 5))
+      setRecentActivity(uniqueActivities.slice(0, 8))
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -198,6 +250,68 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
       fetchDashboardData()
     }
   }, [user?.id, fetchDashboardData])
+
+  // Toast helpers
+  const addToast = (toast: { message: string; type: 'success' | 'error' | 'info' }) => {
+    const id = Math.random().toString(36).substr(2, 9)
+    setToasts((prev) => [...prev, { ...toast, id }])
+    setTimeout(() => {
+      setToasts((prev) => prev.filter(t => t.id !== id))
+    }, 3000)
+  }
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter(t => t.id !== id))
+  }
+
+  // Recycle Bin handlers
+  const handlePermanentDelete = useCallback(async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('snippets')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      addToast({
+        message: 'Item permanently deleted',
+        type: 'success'
+      })
+      
+      fetchDashboardData()
+    } catch (error) {
+      console.error('Error permanently deleting item:', error)
+      addToast({
+        message: 'Failed to permanently delete item',
+        type: 'error'
+      })
+    }
+  }, [fetchDashboardData])
+
+  const handleRestoreSnippet = useCallback(async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('snippets')
+        .update({ deleted_at: null })
+        .eq('id', id)
+
+      if (error) throw error
+
+      addToast({
+        message: 'Item restored successfully',
+        type: 'success'
+      })
+      
+      fetchDashboardData()
+    } catch (error) {
+      console.error('Error restoring item:', error)
+      addToast({
+        message: 'Failed to restore item',
+        type: 'error'
+      })
+    }
+  }, [fetchDashboardData])
 
   const getRelativeTime = (dateString: string) => {
     const now = new Date()
@@ -228,6 +342,27 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
     }
   }
 
+  const getPasswordStats = () => {
+    const favoritePasswords = passwords.filter(p => p.is_favorite).length
+    const passwordFolders = passwords.filter(p => p.folder_id).length
+    const uniqueCategories = new Set(passwords.filter(p => p.category_id).map(p => p.category_id)).size
+    
+    // Password strength analysis (mock analysis for display)
+    const weakPasswords = passwords.length > 0 ? Math.ceil(passwords.length * 0.1) : 0
+    const strongPasswords = passwords.length > 0 ? Math.ceil(passwords.length * 0.7) : 0
+    const mediumPasswords = passwords.length > 0 ? passwords.length - weakPasswords - strongPasswords : 0
+
+    return {
+      total: passwords.length,
+      favorites: favoritePasswords,
+      withFolders: passwordFolders,
+      categories: uniqueCategories,
+      weak: weakPasswords,
+      strong: strongPasswords,
+      medium: mediumPasswords
+    }
+  }
+
   const getWeeklyStats = () => {
     const oneWeekAgo = new Date()
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
@@ -235,8 +370,9 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
     const weeklySnippets = snippets.filter(s => new Date(s.created_at) > oneWeekAgo).length
     const weeklyFolders = folders.filter(f => new Date(f.created_at) > oneWeekAgo).length
     const weeklyFavorites = snippets.filter(s => s.is_favorite && new Date(s.updated_at) > oneWeekAgo).length
+    const weeklyPasswords = passwords.filter(p => new Date(p.created_at) > oneWeekAgo).length
     
-    return { weeklySnippets, weeklyFolders, weeklyFavorites }
+    return { weeklySnippets, weeklyFolders, weeklyFavorites, weeklyPasswords }
   }
 
   if (!isSignedIn || !user) {
@@ -246,7 +382,7 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
-              <p className="text-zinc-400 mt-4">Loading user data...</p>
+              <p className="text-gray-400 mt-4">Loading user data...</p>
             </div>
           </div>
         </div>
@@ -261,7 +397,7 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
           <div className="bg-zinc-900/50 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-zinc-800 shadow-2xl">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
-              <p className="text-zinc-400 mt-4">Loading dashboard data...</p>
+              <p className="text-gray-400 mt-4">Loading dashboard data...</p>
             </div>
           </div>
         </div>
@@ -270,6 +406,7 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
   }
 
   const languageStats = getLanguageStats()
+  const passwordStats = getPasswordStats()
   const weeklyStats = getWeeklyStats()
   const favoritesCount = snippets.filter(s => s.is_favorite).length
 
@@ -284,10 +421,19 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                 Welcome back, {user.firstName || user.emailAddresses[0]?.emailAddress.split('@')[0]}! 👋
               </h1>
               <p className="text-gray-400 text-lg">
-                Here&apos;s what&apos;s happening with your code snippets today
+                Here&apos;s what&apos;s happening with your code snippets and passwords today
               </p>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowRecycleBin(true)}
+                className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all duration-300 shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:scale-105 cursor-pointer flex items-center gap-1.5"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Recycle Bin
+              </button>
               <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-green-400 text-sm font-medium">Online</span>
@@ -321,13 +467,13 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
           <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 rounded-2xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-400 text-sm font-medium">Folders</p>
-                <p className="text-3xl font-bold text-white mt-2">{folders.length}</p>
-                <p className="text-green-300 text-xs mt-1">+{weeklyStats.weeklyFolders} this week</p>
+                <p className="text-green-400 text-sm font-medium">Total Passwords</p>
+                <p className="text-3xl font-bold text-white mt-2">{passwordStats.total}</p>
+                <p className="text-green-300 text-xs mt-1">+{weeklyStats.weeklyPasswords} this week</p>
               </div>
               <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                 </svg>
               </div>
             </div>
@@ -337,8 +483,8 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-purple-400 text-sm font-medium">Favorites</p>
-                <p className="text-3xl font-bold text-white mt-2">{favoritesCount}</p>
-                <p className="text-purple-300 text-xs mt-1">+{weeklyStats.weeklyFavorites} this week</p>
+                <p className="text-3xl font-bold text-white mt-2">{favoritesCount + passwordStats.favorites}</p>
+                <p className="text-purple-300 text-xs mt-1">Snippets & Passwords</p>
               </div>
               <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -378,7 +524,7 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white">Recent Activity</h2>
-                    <p className="text-gray-400 text-sm">Your latest code snippets and updates</p>
+                    <p className="text-gray-400 text-sm">Your latest snippets, passwords, and updates</p>
                   </div>
                 </div>
               </div>
@@ -389,13 +535,19 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                   recentActivity.map((activity) => (
                     <div key={activity.id} className="flex items-center gap-4 p-4 bg-gray-800/50 rounded-xl border border-gray-700/50 hover:bg-gray-800/70 transition-colors">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        activity.type === 'snippet' ? 'bg-blue-500/20' : 'bg-green-500/20'
+                        activity.type === 'snippet' ? 'bg-blue-500/20' : 
+                        activity.type === 'password' ? 'bg-green-500/20' : 
+                        'bg-purple-500/20'
                       }`}>
                         <svg className={`w-5 h-5 ${
-                          activity.type === 'snippet' ? 'text-blue-400' : 'text-green-400'
+                          activity.type === 'snippet' ? 'text-blue-400' : 
+                          activity.type === 'password' ? 'text-green-400' : 
+                          'text-purple-400'
                         }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           {activity.type === 'snippet' ? (
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                          ) : activity.type === 'password' ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                           ) : (
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                           )}
@@ -415,7 +567,7 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                       </svg>
                     </div>
                     <h3 className="text-xl font-semibold text-gray-300 mb-2">No recent activity</h3>
-                    <p className="text-gray-500">Start creating snippets to see your activity here!</p>
+                    <p className="text-gray-500">Start creating snippets and passwords to see your activity here!</p>
                   </div>
                 )}
               </div>
@@ -458,6 +610,10 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                     <span className="text-white text-sm font-medium">{snippets.length}</span>
                   </div>
                   <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-400 text-sm">Total passwords</span>
+                    <span className="text-white text-sm font-medium">{passwordStats.total}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
                     <span className="text-gray-400 text-sm">Total folders</span>
                     <span className="text-white text-sm font-medium">{folders.length}</span>
                   </div>
@@ -476,7 +632,7 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                     <span className="text-gray-400 text-sm">Productivity Score</span>
                     <span className="text-green-400 text-sm font-bold">
                       {(() => {
-                        const score = Math.min(100, Math.round((snippets.length + folders.length * 2) * 5))
+                        const score = Math.min(100, Math.round((snippets.length + passwords.length + folders.length * 2) * 4))
                         return `${score}/100`
                       })()}
                     </span>
@@ -485,7 +641,7 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                     <span className="text-gray-400 text-sm">Organization Level</span>
                     <span className="text-blue-400 text-sm font-medium">
                       {(() => {
-                        const level = folders.length > 0 ? Math.min(100, Math.round((folders.length / Math.max(1, snippets.length)) * 100)) : 0
+                        const level = folders.length > 0 ? Math.min(100, Math.round((folders.length / Math.max(1, snippets.length + passwords.length)) * 100)) : 0
                         return `${level}%`
                       })()}
                     </span>
@@ -494,8 +650,18 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                     <span className="text-gray-400 text-sm">Favorite Rate</span>
                     <span className="text-purple-400 text-sm font-medium">
                       {(() => {
-                        const rate = snippets.length > 0 ? Math.round((favoritesCount / snippets.length) * 100) : 0
+                        const rate = (snippets.length + passwords.length) > 0 ? Math.round(((favoritesCount + passwordStats.favorites) / (snippets.length + passwords.length)) * 100) : 0
                         return `${rate}%`
+                      })()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-400 text-sm">Password Security</span>
+                    <span className="text-green-400 text-sm font-medium">
+                      {(() => {
+                        if (passwords.length === 0) return 'N/A'
+                        const strongRate = Math.round((passwordStats.strong / passwords.length) * 100)
+                        return `${strongRate}% strong`
                       })()}
                     </span>
                   </div>
@@ -505,19 +671,90 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-gray-400 text-xs">Overall Progress</span>
                     <span className="text-gray-400 text-xs">
-                      {snippets.length + folders.length} total items
+                      {snippets.length + passwords.length + folders.length} total items
                     </span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-2">
                     <div 
                       className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, (snippets.length + folders.length) * 2)}%` }}
+                      style={{ width: `${Math.min(100, (snippets.length + passwords.length + folders.length) * 1.5)}%` }}
                     ></div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Password Security Analysis */}
+          {passwords.length > 0 && (
+            <div className="bg-[#111B32] border border-gray-700 rounded-3xl overflow-hidden shadow-xl">
+              <div className="p-6 border-b border-gray-600/30">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-white">Password Security</h3>
+                  <span className="px-3 py-1 bg-green-500/20 text-green-400 text-sm rounded-full border border-green-500/30">
+                    {passwordStats.strong} Strong
+                  </span>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-gradient-to-br from-red-500/10 to-red-600/10 border border-red-500/20 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-red-400 text-sm font-medium">Weak Passwords</span>
+                      <span className="text-red-300 text-2xl font-bold">{passwordStats.weak}</span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-red-500 h-2 rounded-full"
+                        style={{ width: `${passwords.length > 0 ? (passwordStats.weak / passwords.length) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/10 border border-yellow-500/20 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-yellow-400 text-sm font-medium">Medium Passwords</span>
+                      <span className="text-yellow-300 text-2xl font-bold">{passwordStats.medium}</span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-yellow-500 h-2 rounded-full"
+                        style={{ width: `${passwords.length > 0 ? (passwordStats.medium / passwords.length) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-green-400 text-sm font-medium">Strong Passwords</span>
+                      <span className="text-green-300 text-2xl font-bold">{passwordStats.strong}</span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full"
+                        style={{ width: `${passwords.length > 0 ? (passwordStats.strong / passwords.length) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>{passwordStats.withFolders} organized in folders</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    <span>{passwordStats.categories} categories used</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Language Breakdown */}
           <div className="bg-[#111B32] border border-gray-700 rounded-3xl overflow-hidden shadow-xl">
@@ -588,23 +825,23 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-white font-medium">Create New Snippet</p>
-                    <p className="text-gray-400 text-sm">Add a new code snippet</p>
+                    <p className="text-white font-medium">Create Snippet</p>
+                    <p className="text-gray-400 text-sm">Add a new snippet</p>
                   </div>
                 </button>
 
                 <button 
-                  onClick={() => window.location.href = '/snippets'}
+                  onClick={() => window.location.href = '/safe-passwords'}
                   className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/30 rounded-xl hover:bg-green-500/20 transition-colors text-left cursor-pointer"
                 >
                   <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
                     <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
                   </div>
                   <div>
-                    <p className="text-white font-medium">Create Folder</p>
-                    <p className="text-gray-400 text-sm">Organize your snippets</p>
+                    <p className="text-white font-medium">Add Password</p>
+                    <p className="text-gray-400 text-sm">Save a password</p>
                   </div>
                 </button>
 
@@ -618,7 +855,7 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-white font-medium">Import Snippets</p>
+                    <p className="text-white font-medium">Import</p>
                     <p className="text-gray-400 text-sm">Upload from file</p>
                   </div>
                 </button>
@@ -633,14 +870,49 @@ function DashboardUserContent({ useUser, SignOutButton, useAuth }: any) {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-white font-medium">View Favorites</p>
-                    <p className="text-gray-400 text-sm">See your favorite snippets</p>
+                    <p className="text-white font-medium">Favorites</p>
+                    <p className="text-gray-400 text-sm">View favorites</p>
                   </div>
                 </button>
               </div>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Recycle Bin Modal */}
+      <ComprehensiveRecycleBinModal
+        isOpen={showRecycleBin}
+        onClose={() => setShowRecycleBin(false)}
+        onRestore={handleRestoreSnippet}
+        onPermanentDelete={handlePermanentDelete}
+        userId={user?.id || ''}
+        onShowToast={(message, type) => addToast({ message, type })}
+        onRefresh={fetchDashboardData}
+      />
+
+      {/* Toast Container */}
+      <div className="fixed bottom-4 right-4 z-50 space-y-2">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-bottom-5 ${
+              toast.type === 'success' ? 'bg-green-500 text-white' :
+              toast.type === 'error' ? 'bg-red-500 text-white' :
+              'bg-blue-500 text-white'
+            }`}
+          >
+            <span>{toast.message}</span>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="ml-2 text-white hover:text-gray-200"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   )

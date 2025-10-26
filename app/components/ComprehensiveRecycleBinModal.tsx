@@ -127,12 +127,12 @@ export function ComprehensiveRecycleBinModal({
     if (selectedItems.size === filteredItems.length) {
       setSelectedItems(new Set())
     } else {
-      setSelectedItems(new Set(filteredItems.map(item => `${item.type}-${item.id}`)))
+      setSelectedItems(new Set(filteredItems.map(item => `${item.type}|${item.id}`)))
     }
   }
 
   const handleSelectItem = (itemId: string, itemType: string) => {
-    const key = `${itemType}-${itemId}`
+    const key = `${itemType}|${itemId}` // Use pipe separator instead of hyphen
     const newSelected = new Set(selectedItems)
     if (newSelected.has(key)) {
       newSelected.delete(key)
@@ -161,7 +161,15 @@ export function ComprehensiveRecycleBinModal({
       } else {
         const errorData = await response.json()
         console.error('Restore error:', errorData)
-        onShowToast(`Failed to restore ${itemType}: ${errorData.error || 'Unknown error'}`, 'error')
+        
+        // Handle specific error cases
+        if (response.status === 404) {
+          onShowToast(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} not found`, 'error')
+        } else if (response.status === 400 && errorData.error?.includes('not deleted')) {
+          onShowToast(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} is already restored`, 'info')
+        } else {
+          onShowToast(`Failed to restore ${itemType}: ${errorData.error || 'Unknown error'}`, 'error')
+        }
       }
     } catch (error) {
       console.error('Restore error:', error)
@@ -198,16 +206,35 @@ export function ComprehensiveRecycleBinModal({
 
   const handleRestoreSelected = async () => {
     try {
-      const restorePromises = Array.from(selectedItems).map(async (key) => {
-        const [itemType, itemId] = key.split('-')
-        return handleRestoreItem(itemId, itemType)
-      })
+      const selectedItemsArray = Array.from(selectedItems)
+      const selectedCount = selectedItemsArray.length
+      
+      // Process each item individually to handle partial failures
+      const results = await Promise.allSettled(
+        selectedItemsArray.map(async (key) => {
+          const [itemType, itemId] = key.split('|') // Use pipe separator
+          return handleRestoreItem(itemId, itemType)
+        })
+      )
 
-      await Promise.all(restorePromises)
+      // Count successful and failed restores
+      const successful = results.filter(result => result.status === 'fulfilled').length
+      const failed = results.filter(result => result.status === 'rejected').length
+
       setSelectedItems(new Set())
       fetchRecycleBinData()
-      onShowToast(`Restored ${selectedItems.size} item(s)`, 'success')
-    } catch {
+
+      if (successful > 0) {
+        if (failed === 0) {
+          onShowToast(`Successfully restored ${successful} item(s)`, 'success')
+        } else {
+          onShowToast(`Restored ${successful} item(s), ${failed} failed`, 'error')
+        }
+      } else {
+        onShowToast('Failed to restore selected items', 'error')
+      }
+    } catch (error) {
+      console.error('Error in handleRestoreSelected:', error)
       onShowToast('Failed to restore selected items', 'error')
     }
   }
@@ -246,7 +273,7 @@ export function ComprehensiveRecycleBinModal({
   }
 
   const renderItem = (item: DeletedSnippet | DeletedFolder | DeletedCategory, itemType: string) => {
-    const key = `${itemType}-${item.id}`
+    const key = `${itemType}|${item.id}` // Use pipe separator
     const isSelected = selectedItems.has(key)
 
     return (
@@ -254,13 +281,6 @@ export function ComprehensiveRecycleBinModal({
         key={key}
         className="flex items-center gap-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700/50 hover:bg-gray-800/70 transition-colors"
       >
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => handleSelectItem(item.id, itemType)}
-          className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 cursor-pointer"
-        />
-        
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-2">
             {/* Icon based on type */}

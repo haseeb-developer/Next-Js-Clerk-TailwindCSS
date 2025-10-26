@@ -52,30 +52,34 @@ export function ImportModal({ isOpen, onClose, onImportSnippets, onShowToast }: 
     const fileName = file.name.toLowerCase()
     
     // Determine format based on file extension
+    let newFormat: 'json' | 'txt' | 'md' = 'txt' // Default to txt
     if (fileName.endsWith('.json')) {
-      setImportFormat('json')
+      newFormat = 'json'
     } else if (fileName.endsWith('.md')) {
-      setImportFormat('md')
+      newFormat = 'md'
     } else if (fileName.endsWith('.txt')) {
-      setImportFormat('txt')
+      newFormat = 'txt'
     }
 
+    setImportFormat(newFormat)
     setSelectedFile(file)
-    parseFile(file)
+    
+    // Parse file with the correct format
+    parseFileWithFormat(file, newFormat)
   }
 
-  const parseFile = (file: File) => {
+  const parseFileWithFormat = (file: File, format: 'json' | 'txt' | 'md') => {
     const reader = new FileReader()
     reader.onload = (e) => {
       const content = e.target?.result as string
       try {
         let parsedData: Omit<Snippet, 'id' | 'user_id' | 'created_at' | 'updated_at'>[] = []
         
-        if (importFormat === 'json') {
+        if (format === 'json') {
           parsedData = JSON.parse(content)
-        } else if (importFormat === 'txt') {
-          parsedData = parseTextFile(content)
-        } else if (importFormat === 'md') {
+        } else if (format === 'txt') {
+          parsedData = parseTextFile(content, file)
+        } else if (format === 'md') {
           parsedData = parseMarkdownFile(content)
         }
         
@@ -88,47 +92,27 @@ export function ImportModal({ isOpen, onClose, onImportSnippets, onShowToast }: 
     reader.readAsText(file)
   }
 
-  const parseTextFile = (content: string) => {
+  const parseFile = (file: File) => {
+    parseFileWithFormat(file, importFormat)
+  }
+
+  const parseTextFile = (content: string, file: File) => {
     const snippets = []
-    const sections = content.split('='.repeat(50))
     
-    for (const section of sections) {
-      if (section.trim()) {
-        const lines = section.trim().split('\n')
-        const title = lines[0]?.replace('=== ', '').replace(' ===', '') || 'Untitled'
-        const language = lines[1]?.replace('Language: ', '') || 'Text'
-        // const created = lines[2]?.replace('Created: ', '') || new Date().toLocaleDateString()
-        const isPublic = lines[3]?.includes('Yes') || false
-        
-        let description = ''
-        let tags: string[] = []
-        let code = ''
-        
-        let codeStart = false
-        for (let i = 4; i < lines.length; i++) {
-          const line = lines[i]
-          if (line.startsWith('Description: ')) {
-            description = line.replace('Description: ', '')
-          } else if (line.startsWith('Tags: ')) {
-            tags = line.replace('Tags: ', '').split(', ').filter(Boolean)
-          } else if (line === 'Code:') {
-            codeStart = true
-          } else if (codeStart) {
-            code += line + '\n'
-          }
-        }
-        
-        snippets.push({
-          title,
-          description: description || undefined,
-          code: code.trim(),
-          language,
-          tags: tags.length > 0 ? tags : undefined,
-          is_public: isPublic,
-          is_favorite: false
-        })
-      }
-    }
+    // For simple text files, treat the entire content as code
+    // and use filename (without extension) as title
+    const fileName = file.name
+    const title = fileName.replace(/\.[^/.]+$/, '') // Remove file extension
+    
+    snippets.push({
+      title,
+      description: undefined,
+      code: content.trim(),
+      language: 'other', // Default to 'other' for text files
+      tags: undefined,
+      is_public: false, // Default to private
+      is_favorite: false
+    })
     
     return snippets
   }
@@ -289,7 +273,13 @@ export function ImportModal({ isOpen, onClose, onImportSnippets, onShowToast }: 
                         name="importFormat"
                         value={option.value}
                         checked={importFormat === option.value}
-                        onChange={(e) => setImportFormat(e.target.value as 'json' | 'txt' | 'md')}
+                        onChange={(e) => {
+                          const newFormat = e.target.value as 'json' | 'txt' | 'md'
+                          setImportFormat(newFormat)
+                          if (selectedFile) {
+                            parseFileWithFormat(selectedFile, newFormat)
+                          }
+                        }}
                         className="sr-only"
                       />
                       <div className={`p-4 rounded-xl border-2 transition-all duration-300 ${
