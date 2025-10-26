@@ -48,10 +48,42 @@ interface DeletedCategory {
   snippet_count: number
 }
 
+interface DeletedMediaFile {
+  id: string
+  user_id: string
+  file_name: string
+  title?: string
+  description?: string
+  file_type: string
+  file_url: string
+  file_size: number
+  media_folder_id: string | null
+  is_favorite: boolean
+  created_at: string
+  updated_at: string
+  deleted_at: string
+  tags?: string[]
+}
+
+interface DeletedMediaFolder {
+  id: string
+  user_id: string
+  name: string
+  description?: string
+  color: string
+  parent_id: string | null
+  created_at: string
+  updated_at: string
+  deleted_at: string
+  media_count: number
+}
+
 interface RecycleBinData {
   snippets: DeletedSnippet[]
   folders: DeletedFolder[]
   categories: DeletedCategory[]
+  media: DeletedMediaFile[]
+  mediaFolders: DeletedMediaFolder[]
 }
 
 export function ComprehensiveRecycleBinModal({
@@ -66,7 +98,9 @@ export function ComprehensiveRecycleBinModal({
   const [recycleBinData, setRecycleBinData] = useState<RecycleBinData>({
     snippets: [],
     folders: [],
-    categories: []
+    categories: [],
+    media: [],
+    mediaFolders: []
   })
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
@@ -103,7 +137,9 @@ export function ComprehensiveRecycleBinModal({
     return [
       ...recycleBinData.snippets.map(s => ({ ...s, type: 'snippet' as const })),
       ...recycleBinData.folders.map(f => ({ ...f, type: 'folder' as const })),
-      ...recycleBinData.categories.map(c => ({ ...c, type: 'category' as const }))
+      ...recycleBinData.categories.map(c => ({ ...c, type: 'category' as const })),
+      ...recycleBinData.media.map(m => ({ ...m, type: 'media' as const })),
+      ...recycleBinData.mediaFolders.map(mf => ({ ...mf, type: 'mediaFolder' as const }))
     ]
   }
 
@@ -254,8 +290,16 @@ export function ComprehensiveRecycleBinModal({
     }
   }
 
-  const handleDeleteClick = (item: DeletedSnippet | DeletedFolder | DeletedCategory, itemType: string) => {
-    setItemToDelete({ type: itemType, id: item.id, name: 'title' in item ? item.title : item.name })
+  const handleDeleteClick = (item: DeletedSnippet | DeletedFolder | DeletedCategory | DeletedMediaFile | DeletedMediaFolder, itemType: string) => {
+    let itemName = ''
+    if (itemType === 'media') {
+      itemName = (item as DeletedMediaFile).file_name
+    } else if (itemType === 'snippet') {
+      itemName = (item as DeletedSnippet).title
+    } else {
+      itemName = (item as DeletedFolder | DeletedCategory | DeletedMediaFolder).name
+    }
+    setItemToDelete({ type: itemType, id: item.id, name: itemName })
     setShowDeleteConfirm(true)
   }
 
@@ -272,7 +316,7 @@ export function ComprehensiveRecycleBinModal({
     }
   }
 
-  const renderItem = (item: DeletedSnippet | DeletedFolder | DeletedCategory, itemType: string) => {
+  const renderItem = (item: DeletedSnippet | DeletedFolder | DeletedCategory | DeletedMediaFile | DeletedMediaFolder, itemType: string) => {
     const key = `${itemType}|${item.id}` // Use pipe separator
     const isSelected = selectedItems.has(key)
 
@@ -305,9 +349,27 @@ export function ComprehensiveRecycleBinModal({
                 </svg>
               </div>
             )}
+            {itemType === 'media' && (
+              <div className="w-8 h-8 bg-pink-500/20 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              </div>
+            )}
+            {itemType === 'mediaFolder' && (
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${(item as DeletedMediaFolder).color}20` }}>
+                <svg className="w-4 h-4" style={{ color: (item as DeletedMediaFolder).color }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                </svg>
+              </div>
+            )}
             
             <h3 className="text-white font-medium truncate">
-              {'title' in item ? item.title : item.name}
+              {itemType === 'media' 
+                ? (item as DeletedMediaFile).file_name 
+                : itemType === 'snippet'
+                ? (item as DeletedSnippet).title
+                : (item as DeletedFolder | DeletedCategory | DeletedMediaFolder).name}
             </h3>
           </div>
           

@@ -104,3 +104,70 @@ export interface UpdateSnippetData {
   folder_id?: string | null
   category_id?: string | null
 }
+
+export interface MediaFile {
+  id: string
+  user_id: string
+  file_name: string
+  file_type: 'image' | 'video'
+  file_url: string
+  file_size: number
+  mime_type: string
+  width?: number
+  height?: number
+  duration?: number
+  description?: string
+  tags?: string[]
+  media_folder_id?: string | null
+  category_id?: string | null
+  is_favorite: boolean
+  deleted_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MediaFolder {
+  id: string
+  user_id: string
+  name: string
+  description?: string
+  color: string
+  icon: string // This now stores the icon name (e.g., 'folder', 'image', 'video', etc.)
+  parent_id?: string | null
+  deleted_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateMediaData {
+  file_name: string
+  file_type: 'image' | 'video'
+  file_url: string
+  file_size: number
+  mime_type: string
+  width?: number
+  height?: number
+  duration?: number
+  description?: string
+  tags?: string[]
+  media_folder_id?: string | null
+  category_id?: string | null
+  is_favorite?: boolean
+}
+
+export interface UpdateMediaData {
+  file_name?: string
+  description?: string
+  tags?: string[]
+  media_folder_id?: string | null
+  category_id?: string | null
+  is_favorite?: boolean
+}
+
+export interface CreateMediaFolderData {
+  name: string
+  description?: string
+  color?: string
+  icon?: string
+  parent_id?: string | null
+}

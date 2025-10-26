@@ -7,6 +7,7 @@ const isProtectedRoute = createRouteMatcher([
   '/organize(.*)',
   '/dashboard(.*)',
   '/user-settings(.*)',
+  '/media(.*)',
 ]);
 
 const isPublicRoute = createRouteMatcher([
@@ -17,6 +18,7 @@ const isPublicRoute = createRouteMatcher([
   '/credits',
   '/guest-mode-snippets',
   '/confirm-auth',
+  '/confirm-media-auth',
   '/public-snippets(.*)',
   '/api/webhooks(.*)',
   '/api/public-snippets(.*)',
@@ -45,6 +47,15 @@ export default clerkMiddleware(async (auth, req) => {
     const pinVerified = req.nextUrl.searchParams.get('pinVerified') === 'true';
     if (!pinVerified) {
       return NextResponse.redirect(new URL('/confirm-auth', req.url));
+    }
+  }
+
+  // Redirect to confirm-media-auth for media if user is authenticated
+  // But allow access if they have verified their PIN (check query param)
+  if (userId && req.nextUrl.pathname.startsWith('/media')) {
+    const pinVerified = req.nextUrl.searchParams.get('pinVerified') === 'true';
+    if (!pinVerified) {
+      return NextResponse.redirect(new URL('/confirm-media-auth', req.url));
     }
   }
   

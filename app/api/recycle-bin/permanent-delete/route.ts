@@ -67,8 +67,100 @@ export async function POST(request: NextRequest) {
         result = { message: 'Category permanently deleted' }
         break
 
+      case 'media':
+        // Get file path first
+        const { data: mediaFile, error: fetchMediaError } = await supabase
+          .from('media_files')
+          .select('file_url')
+          .eq('id', id)
+          .eq('user_id', userId)
+          .single()
+
+        if (fetchMediaError) {
+          console.error('Error fetching media file:', fetchMediaError)
+        }
+
+        // Delete from storage
+        if (mediaFile?.file_url) {
+          const urlParts = mediaFile.file_url.split('/')
+          const filePath = urlParts[urlParts.length - 1]
+          
+          const { error: storageError } = await supabase.storage
+            .from('media')
+            .remove([filePath])
+
+          if (storageError) {
+            console.error('Error deleting file from storage:', storageError)
+          }
+        }
+
+        // Delete from database
+        const { error: mediaError } = await supabase
+          .from('media_files')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
+
+        if (mediaError) {
+          console.error('Error permanently deleting media:', mediaError)
+          return NextResponse.json({ error: 'Failed to permanently delete media' }, { status: 500 })
+        }
+        result = { message: 'Media permanently deleted' }
+        break
+
+      case 'mediaFolder':
+        // Get all media files in this folder
+        const { data: mediaFiles, error: fetchFilesError } = await supabase
+          .from('media_files')
+          .select('file_url')
+          .eq('media_folder_id', id)
+          .eq('user_id', userId)
+
+        // Delete files from storage
+        if (mediaFiles && mediaFiles.length > 0 && !fetchFilesError) {
+          const filePaths = mediaFiles.map(file => {
+            const urlParts = file.file_url.split('/')
+            return urlParts[urlParts.length - 1]
+          })
+
+          const { error: storageError } = await supabase.storage
+            .from('media')
+            .remove(filePaths)
+
+          if (storageError) {
+            console.error('Error deleting files from storage:', storageError)
+          }
+        }
+
+        // Delete media file records
+        const { error: mediaDeleteError } = await supabase
+          .from('media_files')
+          .delete()
+          .eq('media_folder_id', id)
+          .eq('user_id', userId)
+
+        if (mediaDeleteError) {
+          console.error('Error deleting media files:', mediaDeleteError)
+        }
+
+        // Delete media folder
+        const { error: mediaFolderError } = await supabase
+          .from('media_folders')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
+
+        if (mediaFolderError) {
+          console.error('Error permanently deleting media folder:', mediaFolderError)
+          return NextResponse.json({ error: 'Failed to permanently delete media folder' }, { status: 500 })
+        }
+        result = { message: 'Media folder permanently deleted' }
+        break
+
       default:
-        return NextResponse.json({ error: 'Invalid type. Must be snippet, folder, or category' }, { status: 400 })
+        return NextResponse.json({ error: 'Invalid type. Must be snippet, folder, category, media, or mediaFolder' }, { status: 400 })
     }
 
     return NextResponse.json(result)

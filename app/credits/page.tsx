@@ -383,7 +383,7 @@ export default function CreditsPage() {
                 </div>
                 <span className="text-zinc-400 text-sm group-hover:text-purple-200 transition-colors">Authentication</span>
               </motion.div>
-            </div>
+              </div>
           </motion.div>
 
           {/* Libraries & Tools */}
@@ -480,7 +480,7 @@ export default function CreditsPage() {
                 </div>
                 <span className="text-zinc-400 text-sm group-hover:text-indigo-200 transition-colors">Deployment</span>
               </motion.div>
-            </div>
+              </div>
           </motion.div>
         </motion.div>
 
@@ -500,13 +500,13 @@ export default function CreditsPage() {
             <h2 className="text-3xl font-bold text-white mb-8 flex items-center gap-4">
               <div className="w-14 h-14 bg-gradient-to-r from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-green-500/25">
                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                </svg>
-              </div>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+              </svg>
+            </div>
               <span className="bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Special Thanks
               </span>
-            </h2>
+          </h2>
             <div className="grid gap-8 md:grid-cols-2">
               <motion.div
                 className="p-6 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm"
@@ -523,7 +523,7 @@ export default function CreditsPage() {
                   Open Source Community
                 </h3>
                 <p className="text-zinc-300 leading-relaxed">
-                  This project wouldn&apos;t be possible without the incredible open source community. 
+                This project wouldn&apos;t be possible without the incredible open source community. 
                   Thank you to all the developers who contribute to these amazing tools and libraries that make modern web development possible.
                 </p>
               </motion.div>
@@ -539,13 +539,13 @@ export default function CreditsPage() {
                     <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"/>
                     </svg>
-                  </div>
+            </div>
                   Design Inspiration
                 </h3>
                 <p className="text-zinc-300 leading-relaxed">
-                  Inspired by modern design systems and the amazing work of the developer community. 
+                Inspired by modern design systems and the amazing work of the developer community. 
                   Special thanks to all the designers and developers who share their knowledge and push the boundaries of what&apos;s possible.
-                </p>
+              </p>
               </motion.div>
             </div>
           </div>
@@ -564,8 +564,8 @@ export default function CreditsPage() {
             </div>
             <p className="text-zinc-300 font-medium">
               Built with passion using cutting-edge web technologies
-            </p>
-          </div>
+          </p>
+        </div>
         </motion.div>
       </div>
     </div>

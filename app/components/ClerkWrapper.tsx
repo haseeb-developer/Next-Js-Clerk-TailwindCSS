@@ -19,7 +19,7 @@ export default function ClerkWrapper({ children }: { children: React.ReactNode }
     return (
       <div className="min-h-screen">
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">
-          <div className="max-w-[1700px] mx-auto px-4 py-6">
+          <div className="max-w-[100%] mx-auto px-4 py-6">
             <div className="flex justify-between items-center h-20">
               <ProtectedLink 
                 href="/dashboard" 
@@ -134,7 +134,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen">
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-zinc-900/80 border-b border-zinc-800/50">
-          <div className="max-w-[1700px] mx-auto px-4 py-6">
+          <div className="max-w-[100%] mx-auto px-4 py-6">
             <div className="flex justify-between items-center h-16">
               <ProtectedLink 
                 href="/dashboard" 
@@ -165,7 +165,7 @@ function ClientClerkWrapper({ children }: { children: React.ReactNode }) {
     >
       <div className="min-h-screen">
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-b border-zinc-700/30 shadow-2xl shadow-black/20">
-          <div className="max-w-[1700px] mx-auto px-4">
+          <div className="max-w-[100%] mx-auto px-4">
             <div className="flex justify-between items-center h-20">
               {/* Logo Section */}
               <ProtectedLink

@@ -142,7 +142,7 @@ export function RecycleBinModal({
       if (response.ok) {
         onShowToast(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} restored successfully`, 'success')
         fetchRecycleBinData()
-      } else {
+    } else {
         onShowToast(`Failed to restore ${itemType}`, 'error')
       }
     } catch (error) {
@@ -161,7 +161,7 @@ export function RecycleBinModal({
       if (response.ok) {
         onShowToast(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} permanently deleted`, 'success')
         fetchRecycleBinData()
-      } else {
+    } else {
         onShowToast(`Failed to permanently delete ${itemType}`, 'error')
       }
     } catch (error) {

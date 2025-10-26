@@ -1244,7 +1244,7 @@ export default function SafePasswordsPage() {
       `}</style>
       <div className={`min-h-screen bg-[#0F172A] ${(showFolderPopup || showCategoryPopup) ? 'backdrop-blur-sm' : ''}`}>
       {/* Header */}
-      <div className="max-w-[1700px] mx-auto px-4 pt-6">
+      <div className="max-w-[100%] mx-auto px-4 pt-6">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
@@ -1295,7 +1295,7 @@ export default function SafePasswordsPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="max-w-[1700px] mx-auto px-4">
+      <div className="max-w-[100%] mx-auto px-4">
         <div className="flex gap-2 bg-gray-800/50 backdrop-blur-xl rounded-2xl p-2 border border-gray-700/50 shadow-xl">
           <button
             onClick={() => setActiveTab('passwords')}
@@ -1510,7 +1510,7 @@ export default function SafePasswordsPage() {
       </div>
 
       {/* Main Content - Full Width */}
-      <div className="max-w-[1700px] mx-auto px-4">
+      <div className="max-w-[100%] mx-auto px-4">
         <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 shadow-xl p-6 mt-6">
             {activeTab === 'passwords' && (
               <div>

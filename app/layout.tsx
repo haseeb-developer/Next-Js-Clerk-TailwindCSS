@@ -5,6 +5,7 @@ import ClerkWrapper from './components/ClerkWrapper'
 import { Analytics } from '@vercel/analytics/react'
 import { ClerkProvider } from '@clerk/nextjs'
 import { NavigationProvider } from './contexts/NavigationContext'
+import { Toaster } from 'react-hot-toast'
 
 const poppins = Poppins({
   variable: '--font-poppins',
@@ -51,6 +52,15 @@ export default function RootLayout({
           </NavigationProvider>
         )}
         <Analytics />
+        <Toaster 
+          position="top-right"
+          containerStyle={{ zIndex: 9999 }}
+          toastOptions={{
+            style: {
+              zIndex: 9999,
+            },
+          }}
+        />
       </body>
     </html>
   )

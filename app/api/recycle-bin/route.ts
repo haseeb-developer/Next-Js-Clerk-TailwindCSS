@@ -11,7 +11,7 @@ export async function GET() {
     }
 
     // Fetch all deleted items
-    const [deletedSnippets, deletedFolders, deletedCategories] = await Promise.all([
+    const [deletedSnippets, deletedFolders, deletedCategories, deletedMediaFiles, deletedMediaFolders] = await Promise.all([
       // Deleted snippets
       supabase
         .from('snippets')
@@ -34,6 +34,22 @@ export async function GET() {
         .select('*')
         .eq('user_id', userId)
         .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false }),
+
+      // Deleted media files
+      supabase
+        .from('media_files')
+        .select('*')
+        .eq('user_id', userId)
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false }),
+
+      // Deleted media folders
+      supabase
+        .from('media_folders')
+        .select('*')
+        .eq('user_id', userId)
+        .not('deleted_at', 'is', null)
         .order('deleted_at', { ascending: false })
     ])
 
@@ -52,6 +68,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch deleted categories' }, { status: 500 })
     }
 
+    if (deletedMediaFiles.error) {
+      console.error('Error fetching deleted media files:', deletedMediaFiles.error)
+      return NextResponse.json({ error: 'Failed to fetch deleted media files' }, { status: 500 })
+    }
+
+    if (deletedMediaFolders.error) {
+      console.error('Error fetching deleted media folders:', deletedMediaFolders.error)
+      return NextResponse.json({ error: 'Failed to fetch deleted media folders' }, { status: 500 })
+    }
+
     // Calculate snippet counts for folders and categories
     const foldersWithCounts = (deletedFolders.data || []).map(folder => ({
       ...folder,
@@ -66,7 +92,12 @@ export async function GET() {
     return NextResponse.json({
       snippets: deletedSnippets.data || [],
       folders: foldersWithCounts,
-      categories: categoriesWithCounts
+      categories: categoriesWithCounts,
+      media: deletedMediaFiles.data || [],
+      mediaFolders: (deletedMediaFolders.data || []).map(folder => ({
+        ...folder,
+        media_count: 0 // For now, we'll set this to 0 since media are unassigned when folders are deleted
+      }))
     })
   } catch (error) {
     console.error('Error in recycle bin API:', error)
